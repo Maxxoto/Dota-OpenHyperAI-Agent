@@ -6,8 +6,9 @@ local ____exports = {}
 -- flag is on, and FretBots now auto-starts at hero selection — so a plain
 -- `print` from the LLM modules would vanish for the whole draft. MsgN writes
 -- to the console directly and is not affected by that override.
+local realPrint = print
 function ____exports.ForkLog(message)
-    pcall(print, message)
+    pcall(realPrint, message)
     pcall(MsgN, message)
 end
 return ____exports

@@ -65,27 +65,34 @@ local okBanner, sBannerErr = pcall( function()
 end )
 if not okBanner then print( '[OHA-LLM] banner failed: ' .. tostring( sBannerErr ) ) end
 
--- FretBots/Debug.lua mutes global print after loading, so fork logging goes
--- through both print and MsgN (the raw console logger that survives it).
+-- Capture the engine print before FretBots/Debug.lua replaces the global
+-- with a no-op; the captured function keeps working after the override.
+local RealPrint = print
+
+-- Every channel is best-effort: console (RealPrint survives the override),
+-- message feed (GameRules), and team bot chat. Chat is the visible fallback
+-- when console output is unavailable.
 local function ForkLog(msg)
+	pcall( RealPrint, msg )
 	pcall( print, msg )
 	pcall( MsgN, msg )
-end
-
--- Best-effort pick-phase broadcast: message feed (GameRules), any available
--- team member chat (pre-spawn the handle may be invalid - pcall makes that
--- harmless), and console. Every channel is optional; failures never break picking.
-local function LLMBroadcast( sMsg )
-	ForkLog( sMsg )
 	pcall( function()
 		if GameRules ~= nil and GameRules.SendCustomMessage ~= nil then
-			GameRules:SendCustomMessage( sMsg, 0, 0 )
+			GameRules:SendCustomMessage( msg, 0, 0 )
 		end
 	end )
-	local okUnit, hMember = pcall( GetTeamMember, 5 )
-	if okUnit and hMember ~= nil and hMember.ActionImmediate_Chat ~= nil then
-		pcall( hMember.ActionImmediate_Chat, hMember, sMsg, true )
-	end
+	pcall( function()
+		local hMember = GetTeamMember( 5 )
+		if hMember ~= nil and hMember.ActionImmediate_Chat ~= nil then
+			hMember:ActionImmediate_Chat( msg, true )
+		end
+	end )
+end
+
+-- Best-effort pick-phase broadcast rides ForkLog so chat and console stay
+-- in sync; every channel is optional and failures never break picking.
+local function LLMBroadcast( sMsg )
+	ForkLog( sMsg )
 end
 
 local okMatchupLib, HeroMatchups = pcall(require, GetScriptDirectory()..'/FunLib/aba_matchups')
@@ -996,55 +1003,19 @@ end
 -- gate on the game state, verify it initialized, and retry the aborted load.
 -- Opt out with Customize.Enable_FretBots_By_Default = false.
 --==============================================================================
-local bFretBotsAutoStarted = false
-local nFretBotsAttempts = 0
-local nFretBotsNextTryAt = 0
-local nFretBotsLastState = nil
+local bFretBotsNoteLogged = false
 local bLLMDraftLogged = false
-local FRETBOTS_MAX_ATTEMPTS = 6
 
+-- FretBots runs in the ADDON VM: it reads GameRules and registers
+-- ListenToGameEvent listeners, neither of which exists in the bot-script VM
+-- (Lua Bots API global list). game/gameinit.lua starts it at hero selection;
+-- this hook only announces that once, in console and chat.
 local function AutoStartFretBots()
-	if bFretBotsAutoStarted then return end
-	if Customize and Customize.Enable_FretBots_By_Default == false then
-		bFretBotsAutoStarted = true
-		return
-	end
-	-- Log every game-state change the bots VM reports, so a blocked gate is
-	-- visible in the console instead of silent.
-	local nState = GetGameState()
-	if nState ~= nFretBotsLastState then
-		nFretBotsLastState = nState
-		ForkLog('[OHA] draft Think state='..tostring(nState)
-			..' heroSelection='..tostring(GAME_STATE_HERO_SELECTION)
-			..' gameTime='..tostring(GameTime()))
-	end
-	-- FretBots aborts itself when loaded before hero selection, so only try
-	-- once the state is right; earlier ticks just wait.
-	if nState == nil or nState < GAME_STATE_HERO_SELECTION then return end
-	-- At most one load attempt per game-second; an aborted load is retried
-	-- instead of latching a cached abort.
-	if GameTime() < nFretBotsNextTryAt then return end
-	nFretBotsNextTryAt = GameTime() + 1
-	nFretBotsAttempts = nFretBotsAttempts + 1
-	local sKey = GetScriptDirectory()..'/FretBots'
-	ForkLog('[OHA] FretBots load attempt '..nFretBotsAttempts..'/'..FRETBOTS_MAX_ATTEMPTS)
-	local okFret, errFret = pcall( require, sKey )
-	if okFret and Debug ~= nil then
-		bFretBotsAutoStarted = true
-		ForkLog('[OHA] FretBots mode initialized')
-		return
-	end
-	-- Aborted (cached empty load) or errored: drop the cache so a retry can work.
-	package.loaded[ sKey ] = nil
-	package.loaded[ 'bots.FretBots' ] = nil
-	if not okFret then
-		ForkLog('[OHA] FretBots auto-start failed: '..tostring(errFret)..' | fallback: sv_cheats 1; script_reload_code bots/fretbots')
-		bFretBotsAutoStarted = true
-	elseif nFretBotsAttempts >= FRETBOTS_MAX_ATTEMPTS then
-		ForkLog('[OHA] FretBots did not initialize after '..FRETBOTS_MAX_ATTEMPTS..' tries | fallback: sv_cheats 1; script_reload_code bots/fretbots')
-		bFretBotsAutoStarted = true
-	end
+	if bFretBotsNoteLogged then return end
+	bFretBotsNoteLogged = true
+	ForkLog('[OHA] FretBots auto-start runs in game/gameinit.lua (addon VM)')
 end
+
 
 function Think()
 	AutoStartFretBots()

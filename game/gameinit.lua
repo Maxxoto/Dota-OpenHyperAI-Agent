@@ -188,3 +188,6 @@ if LinkLuaModifier ~= nil then
 		end
 	end
 end
+
+-- Fork: auto-start FretBots at hero selection (addon VM, see the module).
+pcall(require, "game/fretbots_autostart")
