@@ -25,15 +25,53 @@ interface DraftAskState {
 	inFlight: boolean;
 	waitUntil: number;
 	askedCount: number;
+	graceReported: boolean;
 }
 
 let state: DraftAskState | undefined;
 
 function State(): DraftAskState {
 	if (state === undefined) {
-		state = { askedSig: undefined, inFlight: false, waitUntil: 0, askedCount: 0 };
+		state = {
+			askedSig: undefined,
+			inFlight: false,
+			waitUntil: 0,
+			askedCount: 0,
+			graceReported: false,
+		};
 	}
 	return state;
+}
+
+/** Pick-phase debug feed: hero_selection.lua drains this every Think frame. */
+const pickEvents: string[] = [];
+
+function ShortHero(name: string): string {
+	return name.replace("npc_dota_hero_", "");
+}
+
+/** Returns and clears pending pick-phase events (ask sent / reply / fallback). */
+export function DrainPickEvents(): string[] {
+	const out = pickEvents.slice();
+	pickEvents.length = 0;
+	return out;
+}
+
+/** One-line draft state for the on-screen overlay and the post-horn summary. */
+export function PickStatus(): string {
+	const s = State();
+	const directive = CachedDraftDirective();
+	const gate = DraftAskEnabled() ? "on" : "off";
+	const asks = s.askedCount + "/" + MAX_DRAFT_ASKS;
+	if (directive !== undefined) {
+		const picks = directive.picks.map((p) => ShortHero(p.hero)).join(",");
+		let line = "gate=" + gate + " asks=" + asks + " picks=" + picks;
+		if (directive.bans.length > 0) {
+			line += " bans=" + directive.bans.map((b) => ShortHero(b.hero)).join(",");
+		}
+		return line;
+	}
+	return "gate=" + gate + " asks=" + asks + " inflight=" + (s.inFlight ? 1 : 0) + " no-directive";
 }
 
 /** Score-merge hook: re-ranks one candidate via the cached directive (alpha <= 0.5). */
@@ -76,6 +114,13 @@ export function DraftStep(
 	if (now < s.waitUntil && CachedDraftDirective() === undefined) {
 		return "wait";
 	}
+	if (
+		s.waitUntil > 0 && s.askedCount > 0 && !s.graceReported
+		&& CachedDraftDirective() === undefined
+	) {
+		s.graceReported = true;
+		pickEvents.push("[OHA-LLM] grace expired - first pick on defaults");
+	}
 	return "go";
 }
 
@@ -115,14 +160,26 @@ function AskOnce(
 	const trimmed =
 		candidates.length > MAX_CANDIDATES ? candidates.slice(0, MAX_CANDIDATES) : candidates;
 	print("[OHA-LLM] draft ask #" + s.askedCount + " (" + trimmed.length + " candidates)");
+	pickEvents.push(
+		"[OHA-LLM] draft ask #" + s.askedCount + "/" + MAX_DRAFT_ASKS
+		+ " sent (" + trimmed.length + " candidates)"
+	);
 	AskDraftDirective({ candidates: trimmed, bans }, "", (directive) => {
 		s.inFlight = false;
 		if (directive !== undefined) {
+			const pickNames = directive.picks.map((p) => ShortHero(p.hero)).join(",");
+			let ev = "[OHA-LLM] draft reply OK: picks " + pickNames;
+			if (directive.bans.length > 0) {
+				ev += " | bans " + directive.bans.map((b) => ShortHero(b.hero)).join(",");
+			}
+			pickEvents.push(ev);
 			print(
 				"[OHA-LLM] draft directive active: "
 				+ directive.picks.length + " picks, "
 				+ directive.bans.length + " bans"
 			);
+		} else {
+			pickEvents.push("[OHA-LLM] draft reply rejected/empty - default picks");
 		}
 	});
 }

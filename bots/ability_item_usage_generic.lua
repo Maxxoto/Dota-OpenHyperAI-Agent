@@ -407,7 +407,13 @@ function X.SetTalkMessage()
 			bInstallChatCallbackDone = true
 			--print(botName)
 			InstallChatCallback( function( tChat ) X.SetReplyHumanTime( tChat ) end )
-			pcall( bot.ActionImmediate_Chat, bot, '[OHA-LLM] fork active - !llm status ready', false )
+			local sDraft = ''
+			local okAd, LLMAd = pcall( require, GetScriptDirectory()..'/FunLib/llm_draft_adapter' )
+			if okAd and type( LLMAd ) == 'table' and LLMAd.PickStatus then
+				local okP, sP = pcall( LLMAd.PickStatus )
+				if okP and type( sP ) == 'string' then sDraft = ' | draft: ' .. sP end
+			end
+			pcall( bot.ActionImmediate_Chat, bot, '[OHA-LLM] fork active - !llm status ready' .. sDraft, false )
 		end
 
 		if sHumanString ~= nil

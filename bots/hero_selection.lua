@@ -65,6 +65,22 @@ local okBanner, sBannerErr = pcall( function()
 end )
 if not okBanner then print( '[OHA-LLM] banner failed: ' .. tostring( sBannerErr ) ) end
 
+-- Best-effort pick-phase broadcast: message feed (GameRules), any available
+-- team member chat (pre-spawn the handle may be invalid - pcall makes that
+-- harmless), and console. Every channel is optional; failures never break picking.
+local function LLMBroadcast( sMsg )
+	print( sMsg )
+	pcall( function()
+		if GameRules ~= nil and GameRules.SendCustomMessage ~= nil then
+			GameRules:SendCustomMessage( sMsg, 0, 0 )
+		end
+	end )
+	local okUnit, hMember = pcall( GetTeamMember, 5 )
+	if okUnit and hMember ~= nil and hMember.ActionImmediate_Chat ~= nil then
+		pcall( hMember.ActionImmediate_Chat, hMember, sMsg, true )
+	end
+end
+
 local okMatchupLib, HeroMatchups = pcall(require, GetScriptDirectory()..'/FunLib/aba_matchups')
 if not okMatchupLib then HeroMatchups = nil end
 HeroPositionMap = HeroPositionMap.GetHeroPositions()
@@ -970,6 +986,16 @@ end
 function Think()
 	if sForkBanner and DebugDrawText ~= nil then
 		pcall( DebugDrawText, 0.70, 0.05, sForkBanner, 0, 255, 170 )
+	end
+	if DebugDrawText ~= nil then
+		local okS, sPick = pcall( LLMAdapter.PickStatus )
+		if okS and type( sPick ) == 'string' then
+			pcall( DebugDrawText, 0.70, 0.085, sPick, 0, 255, 170 )
+		end
+	end
+	local okE, tPickEvents = pcall( LLMAdapter.DrainPickEvents )
+	if okE and type( tPickEvents ) == 'table' then
+		for _, sEv in ipairs( tPickEvents ) do LLMBroadcast( sEv ) end
 	end
 	if GetGameMode() == GAMEMODE_CM or GetGameMode() == GAMEMODE_REVERSE_CM then
 		CaptainMode.CaptainModeLogic(SupportedHeroes);
