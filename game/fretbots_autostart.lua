@@ -15,6 +15,7 @@ local RealPrint = print
 local started = false
 local tries = 0
 local MAX_TRIES = 5
+local lastLoggedState = nil
 
 -- Console (captured print survives FretBots' override) plus the message feed,
 -- so the status is visible even when console output is unavailable.
@@ -46,6 +47,11 @@ function MODULE.Try()
 		return
 	end
 	if GameRules == nil or GameRules:State_Get() < DOTA_GAMERULES_STATE_HERO_SELECTION then
+		local nState = GameRules ~= nil and GameRules:State_Get() or -1
+		if lastLoggedState ~= nState then
+			lastLoggedState = nState
+			Log("[OHA] FretBots autostart waiting for hero selection (state=" .. tostring(nState) .. ")")
+		end
 		return
 	end
 	tries = tries + 1
@@ -75,7 +81,11 @@ function MODULE.Try()
 		started = true
 		Log("[OHA] FretBots auto-start failed: " .. tostring(err)
 			.. " | fallback: sv_cheats 1; script_reload_code bots/fretbots")
-	elseif tries >= MAX_TRIES then
+		return
+	end
+	Log("[OHA] FretBots loaded but Debug is nil (globals not exported) attempt "
+		.. tries .. "/" .. MAX_TRIES)
+	if tries >= MAX_TRIES then
 		started = true
 		Log("[OHA] FretBots did not initialize after " .. MAX_TRIES
 			.. " tries | fallback: sv_cheats 1; script_reload_code bots/fretbots")
@@ -83,9 +93,13 @@ function MODULE.Try()
 end
 
 -- The state event fires on every game-rule transition; Try() is a no-op until
--- hero selection. One immediate call covers a late module load.
+-- hero selection. One immediate call covers a late module load. Both log lines
+-- make "did the addon side run at all" and "why is it waiting" visible in chat.
 if ListenToGameEvent ~= nil then
 	ListenToGameEvent("game_rules_state_change", function() MODULE.Try() end, nil)
+	Log("[OHA] FretBots autostart armed")
+else
+	Log("[OHA] FretBots autostart cannot arm (no ListenToGameEvent)")
 end
 pcall(MODULE.Try)
 
