@@ -191,6 +191,3 @@ end
 
 -- Fork: auto-start FretBots at hero selection (addon VM, see the module).
 pcall(require, "game/fretbots_autostart")
-
--- Fork: answer !oha and !llm over player_chat from the addon VM.
-pcall(require, "game/fork_commands")

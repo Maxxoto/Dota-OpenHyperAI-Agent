@@ -73,6 +73,11 @@ function MODULE.Try()
 				Log("[OHA] FretBots timer engine started explicitly")
 			end
 		end)
+		-- Chat commands live in the same VM; arm them only after FretBots is up,
+		-- so nothing new runs on the gameinit startup path.
+		local okCmd, cmdErr = pcall(require, "game/fork_commands")
+		Log(okCmd and "[OHA] chat command listener armed"
+			or ("[OHA] chat command listener failed: " .. tostring(cmdErr)))
 		return
 	end
 	package.loaded["bots/FretBots"] = nil

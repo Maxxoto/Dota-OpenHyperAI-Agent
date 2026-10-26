@@ -90,11 +90,17 @@ function MODULE.OnPlayerChat(event)
 	end
 end
 
+local registered = false
+
 function MODULE.Register()
+	if registered then
+		return true
+	end
 	if ListenToGameEvent == nil then
 		pcall(RealPrint, "[OHA] addon chat listener unavailable (no ListenToGameEvent)")
 		return false
 	end
+	registered = true
 	ListenToGameEvent("player_chat", function(event) pcall(MODULE.OnPlayerChat, event) end, nil)
 	Msg("[OHA] addon chat listener ready build=" .. BUILD .. " (!oha, !llm)")
 	return true
