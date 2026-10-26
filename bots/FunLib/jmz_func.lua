@@ -35,6 +35,120 @@ J.Chat = require( GetScriptDirectory()..'/FunLib/aba_chat' )
 J.Utils = require( GetScriptDirectory()..'/FunLib/utils' )
 J.Customize = require(GetScriptDirectory()..'/FunLib/custom_loader')
 
+-- LLM strategy layer (RFC-002 §5): one cached checkpoint directive biases the
+-- lane desires Valve exposes; when the layer is off or any call fails the base
+-- desire is returned unchanged (G5).
+local LLMStrategy = nil
+local LLMStrategyCore = nil
+local tLLMStrategyDirective = nil
+local nLLMStrategyLastAskAt = -999
+local nLLMStrategyAsked = 0
+local nLLMIdentitySeed = nil
+local bLLMIdentityAnnounced = false
+
+local function LLMStrategyModules()
+	if LLMStrategy == nil then
+		local ok, mod = pcall( require, GetScriptDirectory()..'/FunLib/llm_strategy' )
+		if ok and type( mod ) == 'table' then LLMStrategy = mod end
+	end
+	if LLMStrategyCore == nil then
+		local ok, core = pcall( require, GetScriptDirectory()..'/FunLib/llm_strategy_core' )
+		if ok and type( core ) == 'table' then LLMStrategyCore = core end
+	end
+	return LLMStrategy, LLMStrategyCore
+end
+
+local function LLMAnnounceInGame( sMessage )
+	if type( sMessage ) ~= 'string' then return end
+	print( sMessage )
+	pcall( function()
+		if GameRules ~= nil and GameRules.SendCustomMessage ~= nil then
+			GameRules:SendCustomMessage( sMessage, 0, 0 )
+		end
+	end )
+	local ok, hBot = pcall( GetBot )
+	if ok and hBot ~= nil then
+		pcall( hBot.ActionImmediate_Chat, hBot, sMessage, false )
+	end
+end
+
+local function LLMLaneDirectiveValue( kind, lane )
+	local d = tLLMStrategyDirective
+	if type( d ) ~= 'table' then return nil end
+	local tLane = d[kind]
+	if type( tLane ) ~= 'table' then return nil end
+	local sKey = 'mid'
+	if lane == LANE_TOP then
+		sKey = 'top'
+	elseif lane == LANE_BOT then
+		sKey = 'bot'
+	end
+	local value = tLane[sKey]
+	if type( value ) ~= 'number' then return nil end
+	return value
+end
+
+local function LLMApplyDesire( kind, lane, base )
+	local strategy, core = LLMStrategyModules()
+	if strategy == nil or core == nil or type( core.MergeDesire ) ~= 'function' then
+		return base
+	end
+	local okGate, bEnabled = pcall( strategy.StrategyEnabled )
+	if not okGate or not bEnabled then return base end
+	local value = LLMLaneDirectiveValue( kind, lane )
+	if value == nil then return base end
+	local okMerge, merged = pcall( core.MergeDesire, base, value, 0.4 )
+	if okMerge and type( merged ) == 'number' then return merged end
+	return base
+end
+
+local function LLMStrategyTick( now )
+	local strategy, core = LLMStrategyModules()
+	if strategy == nil or core == nil then return end
+	if type( strategy.StrategyEnabled ) ~= 'function'
+	or type( strategy.AskStrategy ) ~= 'function'
+	or type( strategy.StrategyAnnouncement ) ~= 'function'
+	or type( core.ShouldAskStrategy ) ~= 'function'
+	then
+		return
+	end
+	local okState, state = pcall( GetGameState )
+	if not okState or state ~= GAME_STATE_GAME_IN_PROGRESS then return end
+	local okGate, bEnabled = pcall( strategy.StrategyEnabled )
+	if not okGate or not bEnabled then return end
+	local okAsk, bAsk = pcall( core.ShouldAskStrategy, now, nLLMStrategyLastAskAt, nLLMStrategyAsked )
+	if not okAsk or not bAsk then return end
+	local okBot, bot = pcall( GetBot )
+	if not okBot or bot == nil then return end
+
+	local nMinute = math.floor( now / 60 )
+	local nKills = 0
+	local okKills, kills = pcall( function() return GetHeroKills( bot:GetPlayerID() ) end )
+	if okKills and type( kills ) == 'number' then nKills = math.floor( kills ) end
+	local nGold = 0
+	local okGold, gold = pcall( function() return bot:GetGold() end )
+	if okGold and type( gold ) == 'number' then nGold = math.floor( gold ) end
+	local sMatch = '{"kills":'..tostring( nKills )..',"minute":'..tostring( nMinute )..',"gold":'..tostring( nGold )..'}'
+
+	nLLMStrategyAsked = nLLMStrategyAsked + 1
+	nLLMStrategyLastAskAt = now
+	local nAskIndex = nLLMStrategyAsked
+	local okDispatch = pcall( strategy.AskStrategy, sMatch, function( d )
+		pcall( function()
+			if type( d ) ~= 'table' then return end
+			tLLMStrategyDirective = d
+			local okLine, sLine = pcall( strategy.StrategyAnnouncement, d, nMinute, nAskIndex, 8 )
+			if okLine and type( sLine ) == 'string' then
+				LLMAnnounceInGame( sLine )
+			end
+		end )
+	end )
+	if not okDispatch then
+		nLLMStrategyAsked = nLLMStrategyAsked - 1
+		nLLMStrategyLastAskAt = -999
+	end
+end
+
 
 function J.SetUserHeroInit( nAbilityBuildList, nTalentBuildList, sBuyList, sSellList )
 	-- A place to change the bot setup.
@@ -78,6 +192,22 @@ function J.SetUserHeroInit( nAbilityBuildList, nTalentBuildList, sBuyList, sSell
 			local okB, hBot = pcall( GetBot )
 			if okB and hBot ~= nil then
 				pcall( hBot.ActionImmediate_Chat, hBot, sAnn, false )
+			end
+			-- Identity card (RFC-002 §6): one stable per-game persona line, voiced
+			-- through the same visible channels as the build announcement.
+			if not bLLMIdentityAnnounced then
+				local okIdentity, LLMIdentity = pcall( require, GetScriptDirectory()..'/FunLib/llm_identity' )
+				if okIdentity and LLMIdentity and type( LLMIdentity.IdentityAnnouncement ) == 'function' then
+					if nLLMIdentitySeed == nil then
+						local okTime, now = pcall( DotaTime )
+						nLLMIdentitySeed = okTime and math.floor( now ) or 0
+					end
+					local okIdentityLine, sIdentityLine = pcall( LLMIdentity.IdentityAnnouncement, botName, nLLMIdentitySeed )
+					if okIdentityLine and type( sIdentityLine ) == 'string' then
+						bLLMIdentityAnnounced = true
+						LLMAnnounceInGame( sIdentityLine )
+					end
+				end
 			end
 		end
 	end
@@ -3324,9 +3454,9 @@ end
 
 function J.GetMostFarmLaneDesire(bot)
 
-	local nTopDesire = GetFarmLaneDesire( LANE_TOP )
-	local nMidDesire = GetFarmLaneDesire( LANE_MID )
-	local nBotDesire = GetFarmLaneDesire( LANE_BOT )
+	local nTopDesire = LLMApplyDesire( 'farm', LANE_TOP, GetFarmLaneDesire( LANE_TOP ) )
+	local nMidDesire = LLMApplyDesire( 'farm', LANE_MID, GetFarmLaneDesire( LANE_MID ) )
+	local nBotDesire = LLMApplyDesire( 'farm', LANE_BOT, GetFarmLaneDesire( LANE_BOT ) )
 
 	if nTopDesire > nMidDesire and nTopDesire > nBotDesire
 	then
@@ -3349,9 +3479,9 @@ end
 
 function J.GetMostDefendLaneDesire()
 
-	local nTopDesire = J.GetDefendLaneDesire( LANE_TOP )
-	local nMidDesire = J.GetDefendLaneDesire( LANE_MID )
-	local nBotDesire = J.GetDefendLaneDesire( LANE_BOT )
+	local nTopDesire = LLMApplyDesire( 'defend', LANE_TOP, J.GetDefendLaneDesire( LANE_TOP ) )
+	local nMidDesire = LLMApplyDesire( 'defend', LANE_MID, J.GetDefendLaneDesire( LANE_MID ) )
+	local nBotDesire = LLMApplyDesire( 'defend', LANE_BOT, J.GetDefendLaneDesire( LANE_BOT ) )
 
 	if nMidDesire > nTopDesire and nMidDesire > nBotDesire then
 		return LANE_MID, nMidDesire
@@ -3434,9 +3564,11 @@ end
 
 function J.GetMostPushLaneDesire()
 
-	local nTopDesire = GetPushLaneDesire( LANE_TOP )
-	local nMidDesire = GetPushLaneDesire( LANE_MID )
-	local nBotDesire = GetPushLaneDesire( LANE_BOT )
+	pcall( function() LLMStrategyTick( DotaTime() ) end )
+
+	local nTopDesire = LLMApplyDesire( 'push', LANE_TOP, GetPushLaneDesire( LANE_TOP ) )
+	local nMidDesire = LLMApplyDesire( 'push', LANE_MID, GetPushLaneDesire( LANE_MID ) )
+	local nBotDesire = LLMApplyDesire( 'push', LANE_BOT, GetPushLaneDesire( LANE_BOT ) )
 
 	if nTopDesire > nMidDesire and nTopDesire > nBotDesire
 	then
