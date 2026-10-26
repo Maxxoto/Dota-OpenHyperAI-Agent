@@ -38,9 +38,6 @@ return {
     -- Max requests in flight (keep at 1; the game side is single-threaded).
     MaxConcurrent = 1,
 
-    -- Per-game call budgets, split so chat can never starve draft/build calls.
-    MaxCalls = { policy = 12, chat = 30 },
-
     -- Phase toggles: which LLM-driven capabilities are active.
     Phases = {
         draft = true,   -- counter-picks/bans during hero selection

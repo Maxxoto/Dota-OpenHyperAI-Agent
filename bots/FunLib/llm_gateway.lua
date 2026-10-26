@@ -92,6 +92,6 @@ end
 function ____exports.StatusLine()
     local config = GetLlmConfig()
     local stats = Core().Stats()
-    return (((((((("[OHA-LLM] master=" .. tostring(MasterEnabled())) .. " enable=") .. tostring(config.Enable)) .. " model=") .. config.Model) .. " ") .. ((("calls(p/c)=" .. tostring(stats.usedPolicy)) .. "/") .. tostring(stats.usedChat)) .. " ") .. ((("budget=" .. tostring(config.MaxCalls.policy)) .. "/") .. tostring(config.MaxCalls.chat)) .. " ") .. (((("inflight=" .. tostring(stats.inflight)) .. " pending=") .. tostring(stats.pending)) .. " cache=") .. tostring(stats.cacheEntries)
+    return ((((((("[OHA-LLM] master=" .. tostring(MasterEnabled())) .. " enable=") .. tostring(config.Enable)) .. " model=") .. config.Model) .. " ") .. ((("calls(p/c)=" .. tostring(stats.usedPolicy)) .. "/") .. tostring(stats.usedChat)) .. " ") .. (((("inflight=" .. tostring(stats.inflight)) .. " pending=") .. tostring(stats.pending)) .. " cache=") .. tostring(stats.cacheEntries)
 end
 return ____exports

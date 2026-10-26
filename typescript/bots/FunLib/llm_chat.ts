@@ -5,9 +5,8 @@
  * MaybeReply returns "asked" (an LLM call is in flight; caller must NOT use
  * the local-table fallback - the async callback speaks or stays silent) or
  * "skipped" (layer off / cooldown / cap / dice - caller falls back to the
- * legacy local replies, G5). The chat budget (MaxCalls.chat, default 30) and
- * timeouts are enforced by the gateway, the per-game cap/cooldown/chance by
- * llm_chat_core's limiter.
+ * legacy local replies, G5). Timeouts are enforced by the gateway, the
+ * per-game cap/cooldown/chance by llm_chat_core's limiter.
  */
 import * as Gateway from "./llm_gateway";
 import {

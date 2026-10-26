@@ -20,11 +20,6 @@ interface LlmPhaseToggles {
 	chat: boolean;
 }
 
-interface LlmCallBudgets {
-	policy: number;
-	chat: number;
-}
-
 export interface LlmConfig {
 	Enable: boolean;
 	Endpoint: string;
@@ -32,7 +27,6 @@ export interface LlmConfig {
 	APIKey: string;
 	TimeoutMs: number;
 	MaxConcurrent: number;
-	MaxCalls: LlmCallBudgets;
 	Phases: LlmPhaseToggles;
 }
 
@@ -44,7 +38,6 @@ function DefaultConfig(): LlmConfig {
 		APIKey: "",
 		TimeoutMs: 8000,
 		MaxConcurrent: 1,
-		MaxCalls: { policy: 12, chat: 30 },
 		Phases: { draft: true, builds: true, desire: false, chat: true },
 	};
 }
@@ -84,10 +77,6 @@ function MergeUserConfig(config: LlmConfig, mod: any): void {
 	config.APIKey = AsString(mod.APIKey, config.APIKey);
 	config.TimeoutMs = AsClampedNumber(mod.TimeoutMs, config.TimeoutMs, 1000, 60000);
 	config.MaxConcurrent = AsClampedNumber(mod.MaxConcurrent, config.MaxConcurrent, 1, 4);
-	if (type(mod.MaxCalls) === "table") {
-		config.MaxCalls.policy = AsClampedNumber(mod.MaxCalls.policy, config.MaxCalls.policy, 0, 200);
-		config.MaxCalls.chat = AsClampedNumber(mod.MaxCalls.chat, config.MaxCalls.chat, 0, 200);
-	}
 	if (type(mod.Phases) === "table") {
 		config.Phases.draft = AsBool(mod.Phases.draft, config.Phases.draft);
 		config.Phases.builds = AsBool(mod.Phases.builds, config.Phases.builds);

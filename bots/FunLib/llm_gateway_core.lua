@@ -279,11 +279,6 @@ function ____exports.CreateGatewayCore(config, clock, transport)
             cb(false, "", "fallback", "phase-off")
             return
         end
-        if used[kind] >= config.MaxCalls[kind] then
-            Record("ask-rejected", phase, "budget")
-            cb(false, "", "fallback", "budget")
-            return
-        end
         local hit = CacheGet(
             ____exports.CacheKey(phase, system, user),
             ttlSec
@@ -316,8 +311,7 @@ function ____exports.CreateGatewayCore(config, clock, transport)
         Pump()
     end
     local function Enabled(phase)
-        local kind = ____exports.BudgetKindFor(phase)
-        return config.Enable == true and config.Phases[phase] == true and used[kind] < config.MaxCalls[kind]
+        return config.Enable == true and config.Phases[phase] == true
     end
     local function Stats()
         return {
