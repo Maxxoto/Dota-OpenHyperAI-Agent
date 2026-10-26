@@ -34,7 +34,7 @@ export function ChatStatusLine(): string {
 export function MaybeReply(
 	ctx: ChatContext,
 	now: number,
-	onReply: (text: string | undefined) => void
+	onReply: (text: string | undefined, via?: string, reason?: string) => void
 ): ChatAttempt {
 	if (!ChatEnabled() || inFlight) {
 		return "skipped";
@@ -49,7 +49,7 @@ export function MaybeReply(
 		inFlight = false;
 		if (!ok) {
 			ForkLog("[OHA-LLM] chat fallback via=" + via + " reason=" + (reason !== undefined ? reason : "n/a"));
-			onReply(undefined);
+			onReply(undefined, via, reason);
 			return;
 		}
 		const reply = SanitizeChatReply(text);

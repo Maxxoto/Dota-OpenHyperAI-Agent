@@ -34,7 +34,7 @@ function ____exports.MaybeReply(ctx, now, onReply)
             inFlight = false
             if not ok then
                 ForkLog((("[OHA-LLM] chat fallback via=" .. via) .. " reason=") .. (reason ~= nil and reason or "n/a"))
-                onReply(nil)
+                onReply(nil, via, reason)
                 return
             end
             local reply = SanitizeChatReply(text)

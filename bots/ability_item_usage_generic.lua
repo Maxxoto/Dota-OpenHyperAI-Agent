@@ -397,6 +397,7 @@ local sHumanString = nil
 local nHumanID = nil
 local bAllChat = false
 local bAnnouncedLLMReady = false
+local bChatOfflineAnnounced = false
 -- Diagnostics for the chat path: FretBots' Debug replaces global print with
 -- a no-op, so route through the fork logger with a plain-print fallback.
 local function ChatDiag( sMsg )
@@ -478,7 +479,7 @@ function X.SetTalkMessage()
 					speakerName = sSpeaker,
 					speakerHero = (nHumanID ~= nil and GetSelectedHeroName( nHumanID )) or '',
 					message = sHeard,
-				}, DotaTime(), function( sText )
+				}, DotaTime(), function( sText, sVia, sReason )
 					if sText ~= nil and sText ~= '' then
 						pcall( bot.ActionImmediate_Chat, bot, sText, bHeardAllChat )
 						nReplyHumanCount = nReplyHumanCount + 1
@@ -486,10 +487,15 @@ function X.SetTalkMessage()
 						return
 					end
 					-- The model answered nothing. Chat lines are LLM-only by design: do
-					-- not fall back to the constant table, just say why in the log.
-					local sWhy = '[OHA-LLM] chat: model gave no answer'
-						..' (via/level='..tostring( Customize.Trash_Talk_Level )..')'
+					-- not fall back to the constant table, just say why, once in chat so
+					-- the reason is visible without the console.
+					local sWhy = '[OHA-LLM] chat offline via='..tostring( sVia )
+						..' reason='..tostring( sReason or 'empty' )
 					ChatDiag( sWhy )
+					if not bChatOfflineAnnounced then
+						bChatOfflineAnnounced = true
+						pcall( bot.ActionImmediate_Chat, bot, sWhy, bHeardAllChat )
+					end
 				end )
 				if okQ and sStatus == 'asked' then bLLMAsked = true end
 			end
