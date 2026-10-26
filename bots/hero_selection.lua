@@ -1040,41 +1040,16 @@ end
 --==============================================================================
 local bFretBotsNoteLogged = false
 local bLLMDraftLogged = false
-local bFretBotsStarted = false
-local nFretBotsTries = 0
-local nFretBotsNextTry = 0
 
--- FretBots is normally started by game/gameinit.lua in the addon VM. Nothing
--- guarantees that file runs, so this hook also tries the load from the draft VM
--- when that VM exposes GameRules and ListenToGameEvent. Exactly one of the two
--- paths will succeed; both report in chat, so the working one is visible.
+-- FretBots runs in the ADDON VM: it reads GameRules and registers
+-- ListenToGameEvent listeners. game/gameinit.lua starts it at hero selection;
+-- this hook only announces that once, in console and chat. Do NOT require it
+-- from here: an early load in this VM breaks the draft (25ab0ed regression).
 local function AutoStartFretBots()
-	if bFretBotsStarted then return end
-	if GameRules == nil or ListenToGameEvent == nil then
-		if bFretBotsNoteLogged then return end
-		bFretBotsNoteLogged = true
-		if sForkBanner ~= nil then ForkLog( sForkBanner ) end
-		ForkLog('[OHA] FretBots: this VM has no GameRules/ListenToGameEvent (addon loader only) | sv_cheats 1; script_reload_code bots/fretbots')
-		return
-	end
-	if nFretBotsTries >= 5 or GameTime() < nFretBotsNextTry then return end
-	nFretBotsTries = nFretBotsTries + 1
-	nFretBotsNextTry = GameTime() + 1
-	if not bFretBotsNoteLogged then
-		bFretBotsNoteLogged = true
-		if sForkBanner ~= nil then ForkLog( sForkBanner ) end
-	end
-	local ok, err = pcall( function()
-		package.loaded['bots/FretBots'] = nil
-		package.loaded['bots.FretBots'] = nil
-		require( 'bots/FretBots' )
-	end )
-	if ok and Debug ~= nil then
-		bFretBotsStarted = true
-		ForkLog('[OHA] FretBots started from the draft hook (bot VM)')
-		return
-	end
-	ForkLog('[OHA] FretBots draft-hook try '..nFretBotsTries..'/5 failed: '..tostring( err ))
+	if bFretBotsNoteLogged then return end
+	bFretBotsNoteLogged = true
+	if sForkBanner ~= nil then ForkLog( sForkBanner ) end
+	ForkLog('[OHA] FretBots: no difficulty vote after hero spawn? Run in console: sv_cheats 1; script_reload_code bots/fretbots')
 end
 
 
