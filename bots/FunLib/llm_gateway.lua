@@ -22,7 +22,7 @@ local function MasterEnabled()
 end
 local transport = {Post = function(url, apiKey, model, system, user, respond)
     local payload = jsonlib.encode({model = model, messages = {{role = "system", content = system}, {role = "user", content = user}}, temperature = 0.4})
-    local req = CreateRemoteHTTPRequest(url)
+    local req = CreateRemoteHTTPRequest ~= nil and CreateRemoteHTTPRequest(url) or CreateHTTPRequest("POST", url)
     req:SetHTTPRequestHeaderValue("Content-Type", "application/json")
     if apiKey ~= "" then
         req:SetHTTPRequestHeaderValue("Authorization", "Bearer " .. apiKey)

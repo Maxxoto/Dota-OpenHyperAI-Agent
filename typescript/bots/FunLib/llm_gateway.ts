@@ -46,7 +46,11 @@ const transport: GatewayTransport = {
 			],
 			temperature: 0.4,
 		});
-		const req = CreateRemoteHTTPRequest(url);
+		// Two different engine builds expose different helpers: the bot VM ships
+		// CreateRemoteHTTPRequest(url), the addon VM CreateHTTPRequest(method, url).
+		const req = CreateRemoteHTTPRequest !== undefined
+			? CreateRemoteHTTPRequest(url)
+			: CreateHTTPRequest("POST", url);
 		req.SetHTTPRequestHeaderValue("Content-Type", "application/json");
 		if (apiKey !== "") {
 			req.SetHTTPRequestHeaderValue("Authorization", "Bearer " + apiKey);

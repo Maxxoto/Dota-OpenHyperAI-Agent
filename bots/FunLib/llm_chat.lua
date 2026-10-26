@@ -25,26 +25,37 @@ function ____exports.MaybeReply(ctx, now, onReply)
     end
     inFlight = true
     local prompts = BuildChatPrompts(ctx)
-    Gateway.Ask(
-        "chat",
-        prompts.system,
-        prompts.user,
-        45,
-        function(ok, text, via, reason)
-            inFlight = false
-            if not ok then
-                ForkLog((("[OHA-LLM] chat fallback via=" .. via) .. " reason=") .. (reason ~= nil and reason or "n/a"))
-                onReply(nil, via, reason)
-                return
+    local okAsk, errAsk = pcall(function()
+        Gateway.Ask(
+            "chat",
+            prompts.system,
+            prompts.user,
+            45,
+            function(ok, text, via, reason)
+                inFlight = false
+                if not ok then
+                    ForkLog((("[OHA-LLM] chat fallback via=" .. via) .. " reason=") .. (reason ~= nil and reason or "n/a"))
+                    onReply(nil, via, reason)
+                    return
+                end
+                local reply = SanitizeChatReply(text)
+                if reply ~= nil then
+                    limiter.replies = limiter.replies + 1
+                    limiter.lastReplyAt = now
+                end
+                onReply(reply)
             end
-            local reply = SanitizeChatReply(text)
-            if reply ~= nil then
-                limiter.replies = limiter.replies + 1
-                limiter.lastReplyAt = now
-            end
-            onReply(reply)
-        end
-    )
+        )
+    end)
+    if not okAsk then
+        inFlight = false
+        ForkLog("[OHA-LLM] chat ask threw: " .. tostring(errAsk))
+        onReply(
+            nil,
+            "throw",
+            tostring(errAsk)
+        )
+    end
     return "asked"
 end
 return ____exports

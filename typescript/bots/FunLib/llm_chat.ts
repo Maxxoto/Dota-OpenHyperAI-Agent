@@ -45,19 +45,28 @@ export function MaybeReply(
 	}
 	inFlight = true;
 	const prompts = BuildChatPrompts(ctx);
-	Gateway.Ask("chat", prompts.system, prompts.user, 45, (ok, text, via, reason) => {
-		inFlight = false;
-		if (!ok) {
-			ForkLog("[OHA-LLM] chat fallback via=" + via + " reason=" + (reason !== undefined ? reason : "n/a"));
-			onReply(undefined, via, reason);
-			return;
-		}
-		const reply = SanitizeChatReply(text);
-		if (reply !== undefined) {
-			limiter.replies += 1;
-			limiter.lastReplyAt = now;
-		}
-		onReply(reply);
+	// A synchronous throw inside Ask (missing http global, bad config) must not
+	// leave inFlight stuck, or every later message is skipped for the game.
+	const [okAsk, errAsk] = pcall(() => {
+		Gateway.Ask("chat", prompts.system, prompts.user, 45, (ok, text, via, reason) => {
+			inFlight = false;
+			if (!ok) {
+				ForkLog("[OHA-LLM] chat fallback via=" + via + " reason=" + (reason !== undefined ? reason : "n/a"));
+				onReply(undefined, via, reason);
+				return;
+			}
+			const reply = SanitizeChatReply(text);
+			if (reply !== undefined) {
+				limiter.replies += 1;
+				limiter.lastReplyAt = now;
+			}
+			onReply(reply);
+		});
 	});
+	if (!okAsk) {
+		inFlight = false;
+		ForkLog("[OHA-LLM] chat ask threw: " + tostring(errAsk));
+		onReply(undefined, "throw", tostring(errAsk));
+	}
 	return "asked";
 }

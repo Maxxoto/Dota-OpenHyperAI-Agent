@@ -411,9 +411,11 @@ end
 
 function X.SetTalkMessage()
 
-	-- Fork: install the chat callback for every bot once the game is running;
-	-- the reply-bot gate below governs trash-talk volume, not !llm availability.
-	if not bInstallChatCallbackDone and GetGameState() == GAME_STATE_GAME_IN_PROGRESS
+	-- Fork: install the chat callback for every bot from pre-game onward; the
+	-- reply-bot gate below governs trash-talk volume, not !llm availability.
+	-- Waiting for GAME_IN_PROGRESS left the whole game chat-less when the state
+	-- skipped that value in a lobby.
+	if not bInstallChatCallbackDone and GetGameState() >= GAME_STATE_PRE_GAME
 	then
 		bInstallChatCallbackDone = true
 		InstallChatCallback( function( tChat ) X.SetReplyHumanTime( tChat ) end )
