@@ -1145,7 +1145,8 @@ function SelectHeroChatCallback(PlayerID, ChatText, bTeamOnly)
 
 	if startsWithExclamation(text) then
 		if string.find(text, '!oha', 1, true) then
-			LLMBroadcast('[OHA] alive build='..FORK_BUILD..' phase=draft state='..tostring(GetGameState()))
+			sForkBanner = '[OHA] PING OK build='..FORK_BUILD..' state='..tostring(GetGameState())
+			LLMBroadcast( sForkBanner )
 			return
 		end
 		-- !llm is handled here too: ability_item_usage_generic (the usual site)
@@ -1156,6 +1157,7 @@ function SelectHeroChatCallback(PlayerID, ChatText, bTeamOnly)
 			return
 		end
 		if sLLMReply ~= nil then
+			sForkBanner = sLLMReply
 			LLMBroadcast( sLLMReply )
 			return
 		end
