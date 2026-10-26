@@ -14,6 +14,7 @@
 
 require( GetScriptDirectory()..'/FunLib/aba_global_overrides' )
 
+local FORK_BUILD = '2026-10-27-e'
 local X = {}
 
 local PickSchedule = {
@@ -58,7 +59,7 @@ local okBanner, sBannerErr = pcall( function()
 		sModel = tostring( tCfg.Model )
 	end
 	local sGate = (sFlag == 'true' and sEnable == 'true') and 'gate=ON' or 'gate=OFF'
-	sForkBanner = '[OHA-LLM] FORK ACTIVE ' .. sGate .. ' (flag=' .. sFlag .. ' enable=' .. sEnable .. ' model=' .. sModel .. ')'
+	sForkBanner = '[OHA-LLM] FORK ACTIVE ' .. sGate .. ' (flag=' .. sFlag .. ' enable=' .. sEnable .. ' model=' .. sModel .. ') build=' .. FORK_BUILD
 	print( sForkBanner )
 	if sGate == 'gate=OFF' then
 		print( '[OHA-LLM] master gate OFF - bots stay 100% default. Fix: game/Customize/general.lua -> Allow_LLM_Advisor=true AND game/Customize/llm.lua -> Enable=true (see bots/Customize/llm.example.lua)' )
@@ -1143,6 +1144,10 @@ function SelectHeroChatCallback(PlayerID, ChatText, bTeamOnly)
 	end
 
 	if startsWithExclamation(text) then
+		if string.find(text, '!oha', 1, true) then
+			LLMBroadcast('[OHA] alive build='..FORK_BUILD..' phase=draft state='..tostring(GetGameState()))
+			return
+		end
 		-- !llm is handled here too: ability_item_usage_generic (the usual site)
 		-- only loads at bot spawn, so its chat callback is absent during draft.
 		local okCmd, sLLMReply = pcall( LLM_Commands.HandleChatCommand, text )

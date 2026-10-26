@@ -1,3 +1,4 @@
+local OHA_BUILD = '2026-10-27-e'
 local X = {}
 local bot = GetBot()
 local botName = bot:GetUnitName()
@@ -565,6 +566,11 @@ function X.SetReplyHumanTime( tChat )
 		local action, target = J.Utils.TrimString(sChatString):match("^(%S+)%s+(.*)$")
 		print("Set to speak: ".. target)
 		J.Customize.Localization = target
+		return
+	end
+
+	if string.find(sChatString, "!oha", 1, true) then
+		pcall( bot.ActionImmediate_Chat, bot, '[OHA] alive build='..OHA_BUILD..' phase=game state='..tostring(GetGameState()), not tChat.team_only )
 		return
 	end
 
