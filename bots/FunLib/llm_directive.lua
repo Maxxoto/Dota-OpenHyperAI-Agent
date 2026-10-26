@@ -188,7 +188,7 @@ function ____exports.AskDraftDirective(facts, memoryNotes, onDone)
         60,
         function(ok, text, via, reason)
             if not ok then
-                ForkLog((("[OHA-LLM] draft fallback via=" .. via) .. " reason=") .. (reason ~= nil and reason or "n/a"))
+                ForkLog((("[OHA-LLM] draft fallback via=" .. (via ~= nil and via or "n/a")) .. " reason=") .. (reason ~= nil and reason or "n/a"))
                 onDone(nil)
                 return
             end

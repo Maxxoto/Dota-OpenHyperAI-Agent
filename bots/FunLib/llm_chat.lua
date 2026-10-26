@@ -132,7 +132,7 @@ function ____exports.MaybeReplyEnvelope(ctx, now, onResult)
             function(ok, text, via, reason)
                 inFlight = false
                 if not ok then
-                    ForkLog((("[OHA-LLM] chat fallback via=" .. via) .. " reason=") .. (reason ~= nil and reason or "n/a"))
+                    ForkLog((("[OHA-LLM] chat fallback via=" .. (via ~= nil and via or "n/a")) .. " reason=") .. (reason ~= nil and reason or "n/a"))
                     deliver(EmptyEnvelopeReply())
                     return
                 end

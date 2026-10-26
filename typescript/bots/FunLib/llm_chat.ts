@@ -144,7 +144,7 @@ export function MaybeReplyEnvelope(
 		Gateway.Ask("chat", prompts.system, prompts.user, 45, (ok, text, via, reason) => {
 			inFlight = false;
 			if (!ok) {
-				ForkLog("[OHA-LLM] chat fallback via=" + via + " reason=" + (reason !== undefined ? reason : "n/a"));
+				ForkLog("[OHA-LLM] chat fallback via=" + (via !== undefined ? via : "n/a") + " reason=" + (reason !== undefined ? reason : "n/a"));
 				deliver(EmptyEnvelopeReply());
 				return;
 			}

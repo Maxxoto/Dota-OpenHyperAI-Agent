@@ -161,7 +161,7 @@ export function AskDraftDirective(
 	const prompt = DraftPrompt(ctx, memoryNotes, jsonlib.encode, STATE_BUDGET_BYTES);
 	GatewayAsk("draft", prompt.system, prompt.user, 60, (ok, text, via, reason) => {
 		if (!ok) {
-			ForkLog("[OHA-LLM] draft fallback via=" + via + " reason=" + (reason !== undefined ? reason : "n/a"));
+			ForkLog("[OHA-LLM] draft fallback via=" + (via !== undefined ? via : "n/a") + " reason=" + (reason !== undefined ? reason : "n/a"));
 			onDone(undefined);
 			return;
 		}
