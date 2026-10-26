@@ -2,7 +2,7 @@
 local ____exports = {}
 local function DefaultConfig()
     return {
-        Enable = false,
+        Enable = true,
         Endpoint = "https://api.groq.com/openai/v1/chat/completions",
         Model = "qwen/qwen3.8-27b",
         APIKey = "",

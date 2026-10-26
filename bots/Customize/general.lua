@@ -87,10 +87,11 @@ Customize.Allow_AI_GPT_Response = true
 Customize.Enable_FretBots_By_Default = true
 
 -- To allow bots to use the LLM advisor (adaptive draft counter-picks, adaptive item/skill builds, natural chat; see docs RFC-001).
--- This is the master switch and it is OFF by default. Also requires a valid config file at
--- <vscripts>/game/Customize/llm.lua -- copy bots/Customize/llm.example.lua there as a starting point.
--- When this is false (or when the LLM is unreachable/slow/malformed), bots behave exactly as before.
-Customize.Allow_LLM_Advisor = false
+-- This fork enables it by default. The only thing that must be local is the API key:
+-- create <vscripts>/game/Customize/llm.lua with  return { APIKey = "gsk_..." }
+-- (or copy bots/Customize/llm.example.lua there to change model/endpoint/budgets too).
+-- Set this to false to disable the layer entirely; without a key, calls fail and bots behave as before.
+Customize.Allow_LLM_Advisor = true
 
 -- Set the level of bots' trash talks. Disable Allow_Trash_Talk can disable this.
 -- 1 => no trash talks from ally bots, no taunt from enemy after it gets a kill. 2 => ally bots also trash talk to you, allow taunt from enemy after it gets a kill.

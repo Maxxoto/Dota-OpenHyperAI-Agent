@@ -1,10 +1,17 @@
 --[[
     LLM advisor configuration template (RFC-001).
 
-    To use: copy this file to
+    The layer is ENABLED BY DEFAULT in this fork: without this file the defaults are
+    Groq + qwen/qwen3.8-27b, Enable = true, APIKey = "" (calls fail until a key exists).
+
+    The only thing you normally need is the key. Create
         <Steam>/steamapps/common/dota 2 beta/game/dota/scripts/vscripts/game/Customize/llm.lua
-    and edit it there. The game/Customize folder is permanent: it is never overwritten
-    by workshop updates and is never committed to git, so your API key stays private.
+    containing just:
+        return { APIKey = "gsk_your_key_here" }
+
+    Copy this full file there instead if you want to change Model, Endpoint, timeouts
+    or budgets. The game/Customize folder is permanent: it is never overwritten by
+    workshop updates and is never committed to git, so your API key stays private.
 
     Get a Groq API key at https://console.groq.com (free tier is enough).
     Keyless offline option: run Ollama locally and use the localhost Endpoint below.

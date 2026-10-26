@@ -132,11 +132,14 @@ At hero spawn the same directive supplies a skill order (`q`/`w`/`e`/`r`), talen
 ### Setup
 
 1. **Get a free Groq API key** at [console.groq.com](https://console.groq.com).
-2. **Add the key.** Copy `bots/Customize/llm.example.lua` to `<vscripts>/game/Customize/llm.lua` and set `APIKey`. Set `Model` too if you want a different one. For a keyless local run, point it at Ollama: `Endpoint = "http://127.0.0.1:11434/v1/chat/completions"` and leave `APIKey` empty.
-3. **Flip the master switch** `Customize.Allow_LLM_Advisor = true`.
-    - Quick way: change it in `bots/Customize/general.lua` (around line 87) in your local copy. Fine for testing, though a `git pull` will overwrite it.
-    - For an install that survives updates: copy `bots/Customize/general.lua` to `<vscripts>/game/Customize/general.lua` and flip the flag there. The loader **replaces** the whole `Customize` table with `game/Customize/general.lua` when that file exists, so it has to be the full copy, not a one-line file. A one-liner wipes every other setting.
-4. **Start a Custom Lobby** on a **Local Host** server. Open the console (`~`) and watch for `[OHA-LLM]` lines during hero selection and at hero spawn.
+2. **Add the key** - that is the only required step. The layer is **enabled by default** in this fork (`Customize.Allow_LLM_Advisor = true` and `Enable = true` are built in). Create `<vscripts>/game/Customize/llm.lua` with just:
+    ```lua
+    return { APIKey = "gsk_your_key_here" }
+    ```
+    Everything else (Groq endpoint, `qwen/qwen3.8-27b`, timeouts, budgets) already has defaults. Copy `bots/Customize/llm.example.lua` there instead if you want to change `Model`, `Endpoint` (e.g. keyless Ollama at `http://127.0.0.1:11434/v1/chat/completions`), timeouts or budgets.
+3. **Start a Custom Lobby** on a **Local Host** server. Open the console (`~`) and watch for `[OHA-LLM]` lines during hero selection and at hero spawn. The line should read `gate=ON`; `gate=OFF` plus a hint means the key file or the master flag is missing.
+
+To disable the layer on any machine, set `Customize.Allow_LLM_Advisor = false` in `<vscripts>/game/Customize/general.lua` (full copy of `bots/Customize/general.lua`, see the note above about the table being replaced, not merged) - or set `Enable = false` in `llm.lua`.
 
 Other knobs in `llm.lua`: `Endpoint`, `Model`, `TimeoutMs` (8000), `MaxCalls` (12 policy / 30 chat), and `Phases` (draft, builds, and chat on; desire reserved for later work).
 
