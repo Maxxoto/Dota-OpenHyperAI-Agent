@@ -39,6 +39,26 @@ local Localization = require( GetScriptDirectory()..'/FunLib/localization' )
 local HeroPositionMap = require( GetScriptDirectory()..'/FunLib/aba_hero_pos_weights' )
 local heroUnitNames = require( GetScriptDirectory()..'/FretBots/HeroNames')
 local Customize = require(GetScriptDirectory()..'/FunLib/custom_loader')
+
+-- [OHA-LLM] Fork banner: proves THIS modified script is the one Dota loaded.
+-- Prints once per team VM at hero-selection load. Master gate mirrors llm_gateway:
+-- Allow_LLM_Advisor (general.lua) AND Enable (llm.lua) must both be true.
+do
+	local sFlag = tostring( Customize.Allow_LLM_Advisor == true )
+	local sEnable = 'false'
+	local sModel = '?'
+	local okCfg, LLMCfg = pcall( require, GetScriptDirectory()..'/FunLib/llm_config' )
+	if okCfg and type( LLMCfg ) == 'table' and LLMCfg.GetLlmConfig then
+		local tCfg = LLMCfg.GetLlmConfig()
+		sEnable = tostring( tCfg.Enable )
+		sModel = tostring( tCfg.Model )
+	end
+	print( '[OHA-LLM] FORK ACTIVE - modified OHA script running (Allow_LLM_Advisor=' .. sFlag .. ', llm.lua Enable=' .. sEnable .. ', model=' .. sModel .. ')' )
+	if sFlag ~= 'true' or sEnable ~= 'true' then
+		print( '[OHA-LLM] master gate OFF - bots stay 100% default. Fix: game/Customize/general.lua -> Allow_LLM_Advisor=true AND game/Customize/llm.lua -> Enable=true (see bots/Customize/llm.example.lua)' )
+	end
+end
+
 local okMatchupLib, HeroMatchups = pcall(require, GetScriptDirectory()..'/FunLib/aba_matchups')
 if not okMatchupLib then HeroMatchups = nil end
 HeroPositionMap = HeroPositionMap.GetHeroPositions()
