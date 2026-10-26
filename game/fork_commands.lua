@@ -84,7 +84,6 @@ function MODULE.OnPlayerChat(event)
 		Msg("[OHA] alive build=" .. BUILD .. " vm=addon state=" .. state)
 		return
 	end
-
 	if string.find(low, "!llm", 1, true) then
 		Msg("[OHA-LLM] build=" .. BUILD .. " " .. ConfigSummary())
 		return
