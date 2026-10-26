@@ -41,12 +41,12 @@ local heroUnitNames = require( GetScriptDirectory()..'/FretBots/HeroNames')
 local Customize = require(GetScriptDirectory()..'/FunLib/custom_loader')
 
 -- [OHA-LLM] Fork banner: proves THIS modified script is the one Dota loaded.
--- Prints once per team VM at hero-selection load (console, when visible) and
--- draws on-screen during draft via DebugDrawText (chat/console are unreliable
--- for the hero-selection scope). Master gate mirrors llm_gateway:
--- Allow_LLM_Advisor (general.lua) AND Enable (llm.lua) must both be true.
+-- Fully pcall-guarded so no config/module surprise can break hero picking.
+-- Draws on-screen during draft via DebugDrawText when the engine exposes it
+-- in this scope (chat/console are unreliable for the hero-selection scope).
+-- Master gate mirrors llm_gateway: Allow_LLM_Advisor AND llm.lua Enable.
 local sForkBanner
-do
+local okBanner, sBannerErr = pcall( function()
 	local sFlag = tostring( Customize.Allow_LLM_Advisor == true )
 	local sEnable = 'false'
 	local sModel = '?'
@@ -62,7 +62,8 @@ do
 	if sGate == 'gate=OFF' then
 		print( '[OHA-LLM] master gate OFF - bots stay 100% default. Fix: game/Customize/general.lua -> Allow_LLM_Advisor=true AND game/Customize/llm.lua -> Enable=true (see bots/Customize/llm.example.lua)' )
 	end
-end
+end )
+if not okBanner then print( '[OHA-LLM] banner failed: ' .. tostring( sBannerErr ) ) end
 
 local okMatchupLib, HeroMatchups = pcall(require, GetScriptDirectory()..'/FunLib/aba_matchups')
 if not okMatchupLib then HeroMatchups = nil end
@@ -967,7 +968,9 @@ end
 --==============================================================================
 
 function Think()
-	if sForkBanner then DebugDrawText( 0.70, 0.05, sForkBanner, 0, 255, 170 ) end
+	if sForkBanner and DebugDrawText ~= nil then
+		pcall( DebugDrawText, 0.70, 0.05, sForkBanner, 0, 255, 170 )
+	end
 	if GetGameMode() == GAMEMODE_CM or GetGameMode() == GAMEMODE_REVERSE_CM then
 		CaptainMode.CaptainModeLogic(SupportedHeroes);
 		CaptainMode.AddToList();
