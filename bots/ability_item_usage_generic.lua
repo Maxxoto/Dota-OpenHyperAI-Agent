@@ -489,6 +489,8 @@ local function ExecuteChatToolCalls( tCalls, tBotHeroes, tHumanHeroes )
 	end
 
 	local tOpts = { teamBotHeroes = tBotHeroes, humanHeroes = tHumanHeroes }
+	-- toolCalls from the TS envelope path is a 1-based Lua array (verified by
+	-- test/integration_smoke.lua), so ipairs is the correct iteration.
 	for _, rawCall in ipairs( tCalls ) do
 		local call = AsToolCall( rawCall )
 		if call == nil then
