@@ -17,10 +17,12 @@ local MODULE = {}
 local RealPrint = print
 local BUILD = "2026-10-27-f"
 
+local GOLD = "#FFD700"
+
 local function Msg(sText)
 	pcall(RealPrint, sText)
 	pcall(function()
-		GameRules:SendCustomMessage(sText, 0, 0)
+		GameRules:SendCustomMessage("<font color='" .. GOLD .. "'>" .. sText .. "</font>", 0, 0)
 	end)
 end
 

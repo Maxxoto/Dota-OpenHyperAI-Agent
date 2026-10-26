@@ -1044,16 +1044,16 @@ function Think()
 		pcall( RealPrint, '[OHA] auto-start error: '..tostring(errFret) )
 	end
 	if sForkBanner and DebugDrawText ~= nil then
-		pcall( DebugDrawText, 0.70, 0.05, sForkBanner, 0, 255, 170 )
+		pcall( DebugDrawText, 0.70, 0.05, sForkBanner, 255, 215, 0 )
 	end
 	if DebugDrawText ~= nil then
 		local okS, sPick = pcall( LLMAdapter.PickStatus )
 		if okS and type( sPick ) == 'string' then
-			pcall( DebugDrawText, 0.70, 0.085, sPick, 0, 255, 170 )
+			pcall( DebugDrawText, 0.70, 0.085, sPick, 255, 215, 0 )
 		end
 		for idx, entry in ipairs( tForkLog ) do
 			if GameTime() < entry.expires then
-				pcall( DebugDrawText, 0.70, 0.12 + ( idx - 1 ) * 0.025, entry.msg, 0, 255, 170 )
+				pcall( DebugDrawText, 0.70, 0.12 + ( idx - 1 ) * 0.025, entry.msg, 255, 215, 0 )
 			end
 		end
 	end
