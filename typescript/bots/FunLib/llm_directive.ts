@@ -98,6 +98,28 @@ export function BuildOverrideFor(heroName: string): HeroBuildOverride | undefine
 	return { pos: build.pos, ability, talents: build.talents, items: build.items };
 }
 
+/** Chat line describing the hero's applied directive build, or undefined. */
+export function BuildAnnouncement(heroName: string): string | undefined {
+	if (!GatewayEnabled("builds")) {
+		return undefined;
+	}
+	const directive = CachedDraftDirective();
+	if (directive === undefined) {
+		return undefined;
+	}
+	const build = directive.builds[heroName];
+	if (build === undefined) {
+		return undefined;
+	}
+	const shown = build.items.slice(0, 4).map((s: string): string => s.replace("item_", "")).join(", ");
+	const more = build.items.length > 4 ? " +" + (build.items.length - 4) : "";
+	const shortHero = heroName.replace("npc_dota_hero_", "");
+	return (
+		"[OHA-LLM] build " + shortHero + " (pos " + build.pos + "): "
+		+ build.ability_order.join("-") + " | " + shown + more
+	);
+}
+
 /**
  * Build adapter merge (RFC-001 §7, plan task T6): composes the validated
  * directive build with the hero's default lists — LLM entries lead, defaults

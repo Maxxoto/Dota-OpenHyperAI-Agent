@@ -55,6 +55,8 @@ function J.SetUserHeroInit( nAbilityBuildList, nTalentBuildList, sBuyList, sSell
 
 	-- LLM advisor build tier (RFC-001 §7, T6): validated directive builds only,
 	-- merged with the defaults inside the TS module; otherwise all stands (G5).
+	-- Applied builds are announced in chat + the message feed so LLM decisions
+	-- are visible without the console.
 	local okLLM, LLM = pcall(require, GetScriptDirectory()..'/FunLib/llm_directive')
 	if okLLM and LLM then
 		local build = LLM.MergedBuildLists( botName, nAbilityBuildList, sBuyList )
@@ -62,7 +64,21 @@ function J.SetUserHeroInit( nAbilityBuildList, nTalentBuildList, sBuyList, sSell
 			nAbilityBuildList = build.ability
 			nTalentBuildList = J.GetTalentBuildList( build.talents )
 			sBuyList = build.buyList
-			print( '[OHA-LLM] build applied for '..botName..' (pos '..build.pos..')' )
+			local sAnn = '[OHA-LLM] build applied for '..botName..' (pos '..build.pos..')'
+			if LLM.BuildAnnouncement then
+				local okA, sA = pcall( LLM.BuildAnnouncement, botName )
+				if okA and type( sA ) == 'string' then sAnn = sA end
+			end
+			print( sAnn )
+			pcall( function()
+				if GameRules ~= nil and GameRules.SendCustomMessage ~= nil then
+					GameRules:SendCustomMessage( sAnn, 0, 0 )
+				end
+			end )
+			local okB, hBot = pcall( GetBot )
+			if okB and hBot ~= nil then
+				pcall( hBot.ActionImmediate_Chat, hBot, sAnn, false )
+			end
 		end
 	end
 

@@ -1,4 +1,64 @@
 --[[ Generated with https://github.com/TypeScriptToLua/TypeScriptToLua ]]
+-- Lua Library inline imports
+local __TS__StringReplace
+do
+    local sub = string.sub
+    function __TS__StringReplace(source, searchValue, replaceValue)
+        local startPos, endPos = string.find(source, searchValue, nil, true)
+        if not startPos then
+            return source
+        end
+        local before = sub(source, 1, startPos - 1)
+        local replacement = type(replaceValue) == "string" and replaceValue or replaceValue(nil, searchValue, startPos - 1, source)
+        local after = sub(source, endPos + 1)
+        return (before .. replacement) .. after
+    end
+end
+
+local function __TS__ArraySlice(self, first, last)
+    local len = #self
+    first = first or 0
+    if first < 0 then
+        first = len + first
+        if first < 0 then
+            first = 0
+        end
+    else
+        if first > len then
+            first = len
+        end
+    end
+    last = last or len
+    if last < 0 then
+        last = len + last
+        if last < 0 then
+            last = 0
+        end
+    else
+        if last > len then
+            last = len
+        end
+    end
+    local out = {}
+    first = first + 1
+    last = last + 1
+    local n = 1
+    while first < last do
+        out[n] = self[first]
+        first = first + 1
+        n = n + 1
+    end
+    return out
+end
+
+local function __TS__ArrayMap(self, callbackfn, thisArg)
+    local result = {}
+    for i = 1, #self do
+        result[i] = callbackfn(thisArg, self[i], i - 1, self)
+    end
+    return result
+end
+-- End of Lua Library inline imports
 local ____exports = {}
 local ____llm_gateway = require(GetScriptDirectory().."/FunLib/llm_gateway")
 local GatewayAsk = ____llm_gateway.Ask
@@ -69,6 +129,30 @@ function ____exports.BuildOverrideFor(heroName)
         return nil
     end
     return {pos = build.pos, ability = ability, talents = build.talents, items = build.items}
+end
+--- Chat line describing the hero's applied directive build, or undefined.
+function ____exports.BuildAnnouncement(heroName)
+    if not GatewayEnabled("builds") then
+        return nil
+    end
+    local directive = ____exports.CachedDraftDirective()
+    if directive == nil then
+        return nil
+    end
+    local build = directive.builds[heroName]
+    if build == nil then
+        return nil
+    end
+    local shown = table.concat(
+        __TS__ArrayMap(
+            __TS__ArraySlice(build.items, 0, 4),
+            function(____, s) return __TS__StringReplace(s, "item_", "") end
+        ),
+        ", "
+    )
+    local more = #build.items > 4 and " +" .. tostring(#build.items - 4) or ""
+    local shortHero = __TS__StringReplace(heroName, "npc_dota_hero_", "")
+    return ((((((("[OHA-LLM] build " .. shortHero) .. " (pos ") .. tostring(build.pos)) .. "): ") .. table.concat(build.ability_order, "-")) .. " | ") .. shown) .. more
 end
 --- Build adapter merge (RFC-001 §7, plan task T6): composes the validated
 -- directive build with the hero's default lists — LLM entries lead, defaults
