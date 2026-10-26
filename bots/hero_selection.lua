@@ -1019,7 +1019,10 @@ end
 
 
 function Think()
-	AutoStartFretBots()
+	local okFret, errFret = pcall( AutoStartFretBots )
+	if not okFret then
+		pcall( RealPrint, '[OHA] auto-start error: '..tostring(errFret) )
+	end
 	if sForkBanner and DebugDrawText ~= nil then
 		pcall( DebugDrawText, 0.70, 0.05, sForkBanner, 0, 255, 170 )
 	end
@@ -1047,24 +1050,30 @@ function Think()
 
 		-- LLM draft advisor (RFC-001 §6): gathers candidates for the TS adapter,
 		-- which owns the ask loop and returns 'wait' only inside a bounded grace
-		-- window. No-op when the layer is off (G5).
-		local llmEnemies = GetEnemyHeroNames()
-		local llmCandidates, llmSeen = {}, {}
-		for pos = 1, 5 do
-			for _, c in ipairs(ScoreCandidatesForTeam(GetTeam(), tSelectPoolList[pos], llmEnemies)) do
-				if not llmSeen[c.name] and #llmCandidates < 25 then
-					llmSeen[c.name] = true
-					llmCandidates[#llmCandidates + 1] = { hero = c.name, score = c.score }
+		-- window. No-op when the layer is off (G5). Isolated so one bad engine
+		-- call reports itself instead of surfacing as an opaque VScript error.
+		local okDraft, waitOrErr = pcall( function()
+			local llmEnemies = GetEnemyHeroNames()
+			local llmCandidates, llmSeen = {}, {}
+			for pos = 1, 5 do
+				for _, c in ipairs(ScoreCandidatesForTeam(GetTeam(), tSelectPoolList[pos], llmEnemies)) do
+					if not llmSeen[c.name] and #llmCandidates < 25 then
+						llmSeen[c.name] = true
+						llmCandidates[#llmCandidates + 1] = { hero = c.name, score = c.score }
+					end
 				end
 			end
-		end
-		if not bLLMDraftLogged then
-			bLLMDraftLogged = true
-			local okS, sSt = pcall( LLMAdapter.PickStatus )
-			ForkLog('[OHA-LLM] draft phase: enemies='..#llmEnemies..' candidates='..#llmCandidates
-				..' status='..tostring(okS and sSt or 'n/a'))
-		end
-		if LLMAdapter.DraftStep(llmEnemies, llmCandidates, sBanList, GameTime(), PickSchedule.initialized) == 'wait' then
+			if not bLLMDraftLogged then
+				bLLMDraftLogged = true
+				local okS, sSt = pcall( LLMAdapter.PickStatus )
+				ForkLog('[OHA-LLM] draft phase: enemies='..#llmEnemies..' candidates='..#llmCandidates
+					..' status='..tostring(okS and sSt or 'n/a'))
+			end
+			return LLMAdapter.DraftStep(llmEnemies, llmCandidates, sBanList, GameTime(), PickSchedule.initialized) == 'wait'
+		end )
+		if not okDraft then
+			pcall( RealPrint, '[OHA-LLM] draft error: '..tostring(waitOrErr) )
+		elseif waitOrErr then
 			return
 		end
 
