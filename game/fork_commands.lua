@@ -15,7 +15,7 @@
 local MODULE = {}
 
 local RealPrint = print
-local BUILD = "2026-10-27-f"
+local BUILD = "2026-10-27-g"
 
 local GOLD = "#FFD700"
 

@@ -1,4 +1,4 @@
-local OHA_BUILD = '2026-10-27-e'
+local OHA_BUILD = '2026-10-27-g'
 local X = {}
 local bot = GetBot()
 local botName = bot:GetUnitName()
@@ -440,7 +440,7 @@ function X.SetTalkMessage()
 				local okP, sP = pcall( LLMAd.PickStatus )
 				if okP and type( sP ) == 'string' then sDraft = ' | draft: ' .. sP end
 			end
-			pcall( bot.ActionImmediate_Chat, bot, '[OHA-LLM] fork active - !llm status ready' .. sDraft, false )
+			pcall( bot.ActionImmediate_Chat, bot, '[OHA-LLM] fork active build='..OHA_BUILD..' - !llm status ready' .. sDraft, false )
 		end
 
 		if sHumanString ~= nil
