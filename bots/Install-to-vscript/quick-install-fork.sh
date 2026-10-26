@@ -71,6 +71,12 @@ else
 fi
 
 echo ""
+if [ -f "$LLM_LUA" ]; then
+    echo "LLM config: $LLM_LUA"
+    grep -E 'APIKey|Model|Enable' "$LLM_LUA" | sed 's/^[[:space:]]*/  /'
+else
+    echo "WARNING: $LLM_LUA was not created"
+fi
 echo "Install complete."
 echo "Lobby: Custom Lobby, Local Host, Local Dev Script, Enable Cheats."
 echo "FretBots needs once per game: sv_cheats 1; script_reload_code bots/fretbots"

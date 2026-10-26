@@ -82,6 +82,12 @@ if ($key) {
 }
 
 Write-Host ""
+if (Test-Path $llmLua) {
+    Write-Host "LLM config: $llmLua"
+    Select-String -Path $llmLua -Pattern "APIKey|Model|Enable" | ForEach-Object { Write-Host "  $($_.Line.Trim())" }
+} else {
+    Write-Host "WARNING: $llmLua was not created" -ForegroundColor Yellow
+}
 Write-Host "Install complete." -ForegroundColor Green
 Write-Host "Lobby: Custom Lobby, Local Host, Local Dev Script, Enable Cheats."
 Write-Host "FretBots needs once per game: sv_cheats 1; script_reload_code bots/fretbots"
