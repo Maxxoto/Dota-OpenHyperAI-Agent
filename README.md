@@ -18,7 +18,7 @@
 -   **Bots communicate** - they announce pushes, defends, Roshan, and respond to your pings with "On my way!" (in 4 languages)
 -   **10+ Game modes supported** - All pick, Turbo, All random, Captain mode, 1v1 mid, All Random Deathmatch, etc.
 -   **Customizable everything** - bot names, roles, hero picks, bans, item builds, skill builds, and more
--   **AI Chatbot** - bots chat like real (toxic) players (requires FretBots mode)
+-   **AI Chatbot** - bots chat like real (toxic) players (FretBots mode; auto-started in this fork)
 -   **All roles supported** - deterministic position 1-5 lane assignment
 
 ---
@@ -29,7 +29,7 @@
 2. Create a **Custom Lobby** with **Local Host** server
 3. Start the game - bots auto-pick and play
 
-For **FretBots mode** (harder bots, neutral items, chatbot): [Manual installation guide](https://github.com/forest0xia/dota2bot-OpenHyperAI/discussions/68)
+For **FretBots mode** (harder bots, neutral items, chatbot): [Manual installation guide](https://github.com/forest0xia/dota2bot-OpenHyperAI/discussions/68). **This fork auto-starts FretBots** once hero selection begins (you'll get the difficulty vote in-game) - no console command needed. Opt out with `Customize.Enable_FretBots_By_Default = false` in [Customize/general.lua](bots/Customize/general.lua).
 
 ---
 

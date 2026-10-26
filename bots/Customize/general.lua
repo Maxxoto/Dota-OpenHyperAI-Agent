@@ -80,6 +80,12 @@ Customize.Allow_Trash_Talk = true
 -- To allow bots response with GPT generated text to your chats in global channel. Disable Allow_Trash_Talk can disable this.
 Customize.Allow_AI_GPT_Response = true
 
+-- Fork: FretBots mode (difficulty vote, neutral items, AI/Groq chat) starts automatically
+-- once the game reaches hero selection; upstream needs a manual console command
+-- (sv_cheats 1; script_reload_code bots/fretbots). Set to false to restore upstream's
+-- manual behavior.
+Customize.Enable_FretBots_By_Default = true
+
 -- To allow bots to use the LLM advisor (adaptive draft counter-picks, adaptive item/skill builds, natural chat; see docs RFC-001).
 -- This is the master switch and it is OFF by default. Also requires a valid config file at
 -- <vscripts>/game/Customize/llm.lua -- copy bots/Customize/llm.example.lua there as a starting point.

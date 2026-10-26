@@ -982,8 +982,24 @@ end
 --==============================================================================
 -- Think loop
 --==============================================================================
+-- Fork: auto-start FretBots mode (difficulty vote, neutral items, AI chat).
+-- Upstream needs a manual console step (sv_cheats 1; script_reload_code
+-- bots/fretbots). Think() only runs during hero selection, which is exactly
+-- the game state FretBots.lua's own init guard requires. Opt out with
+-- Customize.Enable_FretBots_By_Default = false.
+--==============================================================================
+local bFretBotsAutoStarted = false
+
+local function AutoStartFretBots()
+	if bFretBotsAutoStarted then return end
+	if Customize and Customize.Enable_FretBots_By_Default == false then return end
+	if pcall(require, GetScriptDirectory()..'/FretBots') then
+		bFretBotsAutoStarted = true
+	end
+end
 
 function Think()
+	AutoStartFretBots()
 	if sForkBanner and DebugDrawText ~= nil then
 		pcall( DebugDrawText, 0.70, 0.05, sForkBanner, 0, 255, 170 )
 	end
