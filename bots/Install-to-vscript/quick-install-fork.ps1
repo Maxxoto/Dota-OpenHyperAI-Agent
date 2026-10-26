@@ -66,13 +66,19 @@ foreach ($f in @("bots\hero_selection.lua", "game\gameinit.lua", "game\fretbots_
     if (-not (Test-Path (Join-Path $VScripts $f))) { Fail "verification failed for $f" }
 }
 
-$key = Read-Host "Paste Groq API key for the LLM advisor (Enter to skip)"
 $llmLua = Join-Path $cust "llm.lua"
+if (-not (Test-Path $llmLua)) {
+    Copy-Item (Join-Path $RepoRoot "bots\Customize\llm.example.lua") $llmLua
+    Write-Host "Created $llmLua from llm.example.lua"
+}
+$key = Read-Host "Paste Groq API key for the LLM advisor (Enter to skip)"
 if ($key) {
-    Set-Content -LiteralPath $llmLua -Value ('return { APIKey = "' + $key + '" }') -Encoding ASCII
-    Write-Host "Wrote $llmLua"
-} elseif (-not (Test-Path $llmLua)) {
-    Write-Host 'No key set. Create game\Customize\llm.lua later with: return { APIKey = "gsk_..." }'
+    $t = [IO.File]::ReadAllText($llmLua)
+    $t = $t.Replace('APIKey = ""', 'APIKey = "' + $key + '"')
+    [IO.File]::WriteAllText($llmLua, $t)
+    Write-Host "Groq key written to $llmLua"
+} else {
+    Write-Host "No key set. Edit $llmLua and fill in APIKey later."
 }
 
 Write-Host ""

@@ -11,7 +11,7 @@ The `quick-install-oha*` scripts install the **Steam Workshop** copy (bots only)
 | `quick-install-fork.ps1` | Windows       |
 | `quick-install-fork.sh`  | macOS / Linux |
 
-They back up any existing `bots` / `game` folders with a timestamp, link both from the clone, create `game/Customize` (config tier, gitignored) if missing, verify the links, and optionally write your Groq key as a one-line `game/Customize/llm.lua`.
+They back up any existing `bots` / `game` folders with a timestamp, link both from the clone, create `game/Customize` (config tier, gitignored) if missing, verify the links, and always create `game/Customize/llm.lua` from `bots/Customize/llm.example.lua` - the script asks for your Groq key and pastes it into `APIKey` (Enter skips; fill it in later).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File quick-install-fork.ps1

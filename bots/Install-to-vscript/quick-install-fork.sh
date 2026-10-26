@@ -52,6 +52,11 @@ for f in bots/hero_selection.lua game/gameinit.lua game/fretbots_autostart.lua; 
     [ -e "$VSCRIPTS/$f" ] || fail "verification failed for $f"
 done
 
+LLM_LUA="$CUST/llm.lua"
+if [ ! -f "$LLM_LUA" ]; then
+    cp "$REPO_ROOT/bots/Customize/llm.example.lua" "$LLM_LUA" \
+        && echo "Created $LLM_LUA from llm.example.lua"
+fi
 if [ -t 0 ]; then
     printf 'Paste Groq API key for the LLM advisor (Enter to skip): '
     read -r KEY
@@ -59,10 +64,10 @@ else
     KEY=""
 fi
 if [ -n "${KEY:-}" ]; then
-    printf 'return { APIKey = "%s" }\n' "$KEY" > "$CUST/llm.lua"
-    echo "Wrote $CUST/llm.lua"
-elif [ ! -f "$CUST/llm.lua" ]; then
-    echo "No key set. Create $CUST/llm.lua later with: return { APIKey = \"gsk_...\" }"
+    sed -i.bak "s|APIKey = \"\"|APIKey = \"$KEY\"|" "$LLM_LUA" && rm -f "$LLM_LUA.bak"
+    echo "Groq key written to $LLM_LUA"
+else
+    echo "No key set. Edit $LLM_LUA and fill in APIKey later."
 fi
 
 echo ""
