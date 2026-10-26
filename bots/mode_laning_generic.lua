@@ -3,6 +3,40 @@ local okHumanize, HUMANIZE = pcall(require, GetScriptDirectory()..'/FunLib/llm_h
 if not okHumanize then HUMANIZE = nil end
 local J = require( GetScriptDirectory()..'/FunLib/jmz_func')
 
+-- Humanize (RFC-003 H5): trade/harass willingness per skill tier.
+-- Chance 1 (gate off, binding absent, or bad value) short-circuits before any
+-- roll, so the lane behaves exactly as before (G5). A chance below 1 is rolled
+-- once per trade opportunity: the roll is kept while the same enemy hero stays
+-- in the trade window and reset when that hero leaves it.
+local hTradeTarget = nil
+local bTradeAllowed = true
+
+local function ShouldTakeTrade(hEnemy)
+	local nChance = 1
+	if HUMANIZE ~= nil then
+		local okChance, nFromBinding = pcall(HUMANIZE.TradeChance)
+		if okChance and type(nFromBinding) == 'number' then nChance = nFromBinding end
+	end
+
+	if nChance >= 1 then
+		hTradeTarget = nil
+		bTradeAllowed = true
+		return true
+	end
+
+	if hEnemy == nil then
+		hTradeTarget = nil
+		return true
+	end
+	if hTradeTarget == hEnemy then return bTradeAllowed end
+
+	hTradeTarget = hEnemy
+	bTradeAllowed = true
+	local okRoll, nRoll = pcall(RandomFloat, 0, 1)
+	if okRoll and type(nRoll) == 'number' then bTradeAllowed = nRoll < nChance end
+	return bTradeAllowed
+end
+
 local Version      = require(GetScriptDirectory()..'/FunLib/version')
 local Localization = require(GetScriptDirectory()..'/FunLib/localization')
 
@@ -30,6 +64,23 @@ local announcementGapSeconds     = 6
 local isChangePosMessageDone     = false
 
 if Utils.BuggyHeroesDueToValveTooLazy[botName] then local_mode_laning_generic = dofile( GetScriptDirectory().."/FunLib/override_generic/mode_laning_generic" ) end
+
+-- Humanize (RFC-003 H5): the in-lane harass branch of this mode lives in the
+-- override module's Think (support harass on the enemy hero), so gate its
+-- target picker here. With the layer off the picker passes through untouched;
+-- last-hit and deny decisions never reach this seam.
+if HUMANIZE ~= nil and local_mode_laning_generic ~= nil and type(GetHarassTarget) == 'function' then
+	local VanillaGetHarassTarget = GetHarassTarget
+	GetHarassTarget = function(hEnemyList)
+		local okPick, harassTarget = pcall(VanillaGetHarassTarget, hEnemyList)
+		if not okPick or not J.IsValidHero(harassTarget) then
+			ShouldTakeTrade(nil)
+			return harassTarget
+		end
+		if ShouldTakeTrade(harassTarget) then return harassTarget end
+		return nil
+	end
+end
 
 function GetDesire()
 	PickOneAnnouncer()

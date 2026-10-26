@@ -63,4 +63,14 @@ function ____exports.RotationDelaySec()
         RandomFloat(0, 1)
     )
 end
+--- Trade/harass willingness multiplier: gate off returns exactly 1 (frequency
+-- unchanged); gate on returns the tier's tradeWindowChance so lower tiers
+-- take fewer favorable trades.
+function ____exports.TradeChance()
+    local gate = Gate()
+    if not gate.on then
+        return 1
+    end
+    return ProfileFor(gate.tier).tradeWindowChance
+end
 return ____exports

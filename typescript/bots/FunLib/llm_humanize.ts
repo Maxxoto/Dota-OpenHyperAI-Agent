@@ -59,3 +59,16 @@ export function RotationDelaySec(): number {
 	}
 	return SampleLatency(ProfileFor(gate.tier), "rotation", RandomFloat(0, 1));
 }
+
+/**
+ * Trade/harass willingness multiplier: gate off returns exactly 1 (frequency
+ * unchanged); gate on returns the tier's tradeWindowChance so lower tiers
+ * take fewer favorable trades.
+ */
+export function TradeChance(): number {
+	const gate = Gate();
+	if (!gate.on) {
+		return 1;
+	}
+	return ProfileFor(gate.tier).tradeWindowChance;
+}
