@@ -1,4 +1,6 @@
 local Utils = require( GetScriptDirectory()..'/FunLib/utils')
+local okHumanize, HUMANIZE = pcall(require, GetScriptDirectory()..'/FunLib/llm_humanize')
+if not okHumanize then HUMANIZE = nil end
 local J = require( GetScriptDirectory()..'/FunLib/jmz_func')
 
 local Version      = require(GetScriptDirectory()..'/FunLib/version')
@@ -138,10 +140,18 @@ end
 function GetBestLastHitCreep(hCreepList)
 	local dmgDelta = attackDamage * 0.7
 
+	-- Humanize (RFC-003 H2): signed last-hit timing error per skill tier.
+	-- Zero when the gate is off, so the timing math is byte-identical (G5).
+	local nHumanJitter = 0
+	if HUMANIZE ~= nil then
+		local okJ, nJ = pcall(HUMANIZE.LastHitDelayJitter)
+		if okJ and type(nJ) == 'number' then nHumanJitter = nJ end
+	end
+
 	local moveToCreep = nil
 	for _, creep in pairs(hCreepList) do
 		if J.IsValid(creep) and J.CanBeAttacked(creep) then
-			local nDelay = J.GetAttackProDelayTime(bot, creep)
+			local nDelay = J.GetAttackProDelayTime(bot, creep) + nHumanJitter
 			if J.WillKillTarget(creep, attackDamage, DAMAGE_TYPE_PHYSICAL, nDelay) then
 				return creep, false
 			end
