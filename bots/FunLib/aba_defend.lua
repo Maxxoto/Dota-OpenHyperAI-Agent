@@ -389,65 +389,65 @@ function IsThereNoTeammateTravelBootsDefender(bot)
     return true
 end
 function GetHighGroundEdgeWaitPoint(team, lane)
+    local ____temp_1
+    if lane == Lane.Top then
+        ____temp_1 = GetTower(team, Tower.Top3)
+    else
+        local ____temp_0
+        if lane == Lane.Mid then
+            ____temp_0 = GetTower(team, Tower.Mid3)
+        else
+            ____temp_0 = GetTower(team, Tower.Bot3)
+        end
+        ____temp_1 = ____temp_0
+    end
+    local t3 = ____temp_1
     local ____temp_3
     if lane == Lane.Top then
-        ____temp_3 = GetTower(team, Tower.Top3)
+        ____temp_3 = GetBarracks(team, Barracks.TopMelee)
     else
         local ____temp_2
         if lane == Lane.Mid then
-            ____temp_2 = GetTower(team, Tower.Mid3)
+            ____temp_2 = GetBarracks(team, Barracks.MidMelee)
         else
-            ____temp_2 = GetTower(team, Tower.Bot3)
+            ____temp_2 = GetBarracks(team, Barracks.BotMelee)
         end
         ____temp_3 = ____temp_2
     end
-    local t3 = ____temp_3
+    local raxM = ____temp_3
     local ____temp_5
     if lane == Lane.Top then
-        ____temp_5 = GetBarracks(team, Barracks.TopMelee)
+        ____temp_5 = GetBarracks(team, Barracks.TopRanged)
     else
         local ____temp_4
         if lane == Lane.Mid then
-            ____temp_4 = GetBarracks(team, Barracks.MidMelee)
+            ____temp_4 = GetBarracks(team, Barracks.MidRanged)
         else
-            ____temp_4 = GetBarracks(team, Barracks.BotMelee)
+            ____temp_4 = GetBarracks(team, Barracks.BotRanged)
         end
         ____temp_5 = ____temp_4
     end
-    local raxM = ____temp_5
-    local ____temp_7
-    if lane == Lane.Top then
-        ____temp_7 = GetBarracks(team, Barracks.TopRanged)
-    else
-        local ____temp_6
-        if lane == Lane.Mid then
-            ____temp_6 = GetBarracks(team, Barracks.MidRanged)
-        else
-            ____temp_6 = GetBarracks(team, Barracks.BotRanged)
-        end
-        ____temp_7 = ____temp_6
-    end
-    local raxR = ____temp_7
+    local raxR = ____temp_5
     local anc = GetAncient(team)
-    local ____jmz_IsValidBuilding_result_10
+    local ____jmz_IsValidBuilding_result_8
     if jmz.IsValidBuilding(t3) then
-        ____jmz_IsValidBuilding_result_10 = t3
+        ____jmz_IsValidBuilding_result_8 = t3
     else
-        local ____jmz_IsValidBuilding_result_9
+        local ____jmz_IsValidBuilding_result_7
         if jmz.IsValidBuilding(raxM) then
-            ____jmz_IsValidBuilding_result_9 = raxM
+            ____jmz_IsValidBuilding_result_7 = raxM
         else
-            local ____jmz_IsValidBuilding_result_8
+            local ____jmz_IsValidBuilding_result_6
             if jmz.IsValidBuilding(raxR) then
-                ____jmz_IsValidBuilding_result_8 = raxR
+                ____jmz_IsValidBuilding_result_6 = raxR
             else
-                ____jmz_IsValidBuilding_result_8 = nil
+                ____jmz_IsValidBuilding_result_6 = nil
             end
-            ____jmz_IsValidBuilding_result_9 = ____jmz_IsValidBuilding_result_8
+            ____jmz_IsValidBuilding_result_7 = ____jmz_IsValidBuilding_result_6
         end
-        ____jmz_IsValidBuilding_result_10 = ____jmz_IsValidBuilding_result_9
+        ____jmz_IsValidBuilding_result_8 = ____jmz_IsValidBuilding_result_7
     end
-    local anchorBuilding = ____jmz_IsValidBuilding_result_10
+    local anchorBuilding = ____jmz_IsValidBuilding_result_8
     if anchorBuilding and jmz.IsValidBuilding(anc) then
         local t = anchorBuilding:GetLocation()
         local a = anc:GetLocation()
@@ -882,14 +882,7 @@ if not okLoc then
     Localization = {Get = function(_) return "Defend here!" end}
 end
 local Customize = require(GetScriptDirectory().."/Customize/general")
-local ____Customize_1 = Customize
-local ____Customize_Enable_0
-if Customize.Enable then
-    ____Customize_Enable_0 = Customize.ThinkLess
-else
-    ____Customize_Enable_0 = 1
-end
-____Customize_1.ThinkLess = ____Customize_Enable_0
+Customize.ThinkLess = Customize.Enable and Customize.ThinkLess or 1
 PING_DELTA = 5
 local SEARCH_RANGE_DEFAULT = 1600
 MAX_DESIRE_CAP = 0.98

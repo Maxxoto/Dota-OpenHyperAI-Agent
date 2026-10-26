@@ -52,6 +52,20 @@ function J.SetUserHeroInit( nAbilityBuildList, nTalentBuildList, sBuyList, sSell
 		sBuyList = tBotSet.PurchaseList
 		sSellList = tBotSet.SellList
 	end
+
+	-- LLM advisor build tier (RFC-001 §7, T6): validated directive builds only,
+	-- merged with the defaults inside the TS module; otherwise all stands (G5).
+	local okLLM, LLM = pcall(require, GetScriptDirectory()..'/FunLib/llm_directive')
+	if okLLM and LLM then
+		local build = LLM.MergedBuildLists( botName, nAbilityBuildList, sBuyList )
+		if build then
+			nAbilityBuildList = build.ability
+			nTalentBuildList = J.GetTalentBuildList( build.talents )
+			sBuyList = build.buyList
+			print( '[OHA-LLM] build applied for '..botName..' (pos '..build.pos..')' )
+		end
+	end
+
 	return nAbilityBuildList, nTalentBuildList, sBuyList, sSellList
 end
 

@@ -80,6 +80,12 @@ Customize.Allow_Trash_Talk = true
 -- To allow bots response with GPT generated text to your chats in global channel. Disable Allow_Trash_Talk can disable this.
 Customize.Allow_AI_GPT_Response = true
 
+-- To allow bots to use the LLM advisor (adaptive draft counter-picks, adaptive item/skill builds, natural chat; see docs RFC-001).
+-- This is the master switch and it is OFF by default. Also requires a valid config file at
+-- <vscripts>/game/Customize/llm.lua -- copy bots/Customize/llm.example.lua there as a starting point.
+-- When this is false (or when the LLM is unreachable/slow/malformed), bots behave exactly as before.
+Customize.Allow_LLM_Advisor = false
+
 -- Set the level of bots' trash talks. Disable Allow_Trash_Talk can disable this.
 -- 1 => no trash talks from ally bots, no taunt from enemy after it gets a kill. 2 => ally bots also trash talk to you, allow taunt from enemy after it gets a kill.
 Customize.Trash_Talk_Level = 1

@@ -11,6 +11,7 @@ local J = require( GetScriptDirectory()..'/FunLib/jmz_func' )
 local Utils = require( GetScriptDirectory()..'/FunLib/utils' )
 local BotBuild = dofile( GetScriptDirectory().."/BotLib/"..string.gsub( botName, "npc_dota_", "" ) )
 local Localization = require( GetScriptDirectory()..'/FunLib/localization' )
+local LLM_Commands = require( GetScriptDirectory()..'/FunLib/llm_directive' )
 local Customize = require(GetScriptDirectory()..'/Customize/general')
 Customize.ThinkLess = Customize.Enable and Customize.ThinkLess or 1
 if GAMEMODE_TURBO == nil then GAMEMODE_TURBO = 23 end
@@ -356,6 +357,12 @@ function X.SetReplyHumanTime( tChat )
 		local action, target = J.Utils.TrimString(sChatString):match("^(%S+)%s+(.*)$")
 		print("Set to speak: ".. target)
 		J.Customize.Localization = target
+		return
+	end
+
+	if string.find(sChatString, "!llm") then
+		local sLLMReply = LLM_Commands.HandleChatCommand( sChatString )
+		if sLLMReply then print( sLLMReply ) end
 		return
 	end
 

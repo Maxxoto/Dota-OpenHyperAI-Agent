@@ -488,14 +488,7 @@ function ____exports.IsAnyTargetBackdooredAt(_bot, lane)
     return not not (nearest and ____exports.HasBackdoorProtect(nearest))
 end
 local Customize = require(GetScriptDirectory().."/Customize/general")
-local ____Customize_1 = Customize
-local ____Customize_Enable_0
-if Customize.Enable then
-    ____Customize_Enable_0 = Customize.ThinkLess
-else
-    ____Customize_Enable_0 = 1
-end
-____Customize_1.ThinkLess = ____Customize_Enable_0
+Customize.ThinkLess = Customize.Enable and Customize.ThinkLess or 1
 pingTimeDelta = 5
 StartToPushTime = 16 * 60
 BOT_MODE_DESIRE_EXTRA_LOW = 0.02

@@ -74,6 +74,7 @@ declare global {
     interface HTTPRequest {
         SetHTTPRequestRawPostBody(contentType: string, body: string): void;
         SetHTTPRequestGetOrPostParameter(aString: string, bString: string): boolean;
+        SetHTTPRequestHeaderValue(key: string, value: string): void;
         Send(callback: (result: any) => void): void;
     }
 
@@ -89,6 +90,7 @@ declare global {
     }
 
     function CreateRemoteHTTPRequest(url: string): HTTPRequest;
+    function CreateHTTPRequest(method: string, url: string): HTTPRequest;
     function IsCMPickedHero(team: Team, heroName: string): boolean;
     function IsCMBannedHero(heroName: string): boolean;
     function GetCMPhaseTimeRemaining(): number;
@@ -105,6 +107,19 @@ declare global {
     function IsPlayerInHeroSelectionControl(playerId: number): boolean;
     function GetGameState(): number;
     function GetGameMode(): number;
+    interface PlayerResourceType {
+        GetPlayerCount(): number;
+        IsValidPlayerID(playerId: number): boolean;
+        GetConnectionState(playerId: number): number;
+        GetTeam(playerId: number): number;
+        GetSelectedHeroName(playerId: number): string;
+        GetNetWorth(playerId: number): number;
+        GetLevel(playerId: number): number;
+        GetKills(playerId: number): number;
+        GetDeaths(playerId: number): number;
+        GetAssists(playerId: number): number;
+    }
+    const PlayerResource: PlayerResourceType;
 }
 
 export {};

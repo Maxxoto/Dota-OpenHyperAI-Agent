@@ -1,0 +1,24 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "target": "ES2020",
+        "lib": ["ES2020"],
+        "esModuleInterop": true,
+        "strict": true,
+        "noImplicitReturns": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "types": ["node", "lua-types/5.1"],
+        "skipLibCheck": true,
+        "outDir": "./dist-test",
+        "rootDir": "."
+    },
+    "include": [
+        "typescript/bots/FunLib/llm_gateway_core.ts",
+        "typescript/bots/FunLib/llm_config.ts",
+        "typescript/bots/FunLib/llm_state_core.ts",
+        "typescript/bots/FunLib/llm_directive_core.ts",
+        "test/**/*.ts"
+    ]
+}

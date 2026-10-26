@@ -34,6 +34,7 @@ local Role = require( GetScriptDirectory()..'/FunLib/aba_role' )
 local Utils = require( GetScriptDirectory()..'/FunLib/utils' )
 local Dota2Teams = require( GetScriptDirectory()..'/FunLib/aba_team_names' )
 local CaptainMode = require( GetScriptDirectory()..'/FunLib/captain_mode' )
+local LLMAdapter = require( GetScriptDirectory()..'/FunLib/llm_draft_adapter' )
 local Localization = require( GetScriptDirectory()..'/FunLib/localization' )
 local HeroPositionMap = require( GetScriptDirectory()..'/FunLib/aba_hero_pos_weights' )
 local heroUnitNames = require( GetScriptDirectory()..'/FretBots/HeroNames')
@@ -605,6 +606,9 @@ local function ScoreCandidatesForTeam(team, rolePool, enemyNames)
 				score = score * weakPenalty
 			end
 
+			-- LLM advisor (RFC-001 §6): re-rank via cached directive; no-op when off (G5)
+			score = LLMAdapter.AdjustScore(cand, score)
+
 			table.insert(list, { name = cand, score = score })
 		end
 	end
@@ -907,6 +911,23 @@ function Think()
 		or X.IsHumanNotReady(GetTeam())
 		or X.IsHumanNotReady(GetOpposingTeam()) then
 			if GetGameMode() ~= GAMEMODE_TURBO then return end
+		end
+
+		-- LLM draft advisor (RFC-001 §6): gathers candidates for the TS adapter,
+		-- which owns the ask loop and returns 'wait' only inside a bounded grace
+		-- window. No-op when the layer is off (G5).
+		local llmEnemies = GetEnemyHeroNames()
+		local llmCandidates, llmSeen = {}, {}
+		for pos = 1, 5 do
+			for _, c in ipairs(ScoreCandidatesForTeam(GetTeam(), tSelectPoolList[pos], llmEnemies)) do
+				if not llmSeen[c.name] and #llmCandidates < 25 then
+					llmSeen[c.name] = true
+					llmCandidates[#llmCandidates + 1] = { hero = c.name, score = c.score }
+				end
+			end
+		end
+		if LLMAdapter.DraftStep(llmEnemies, llmCandidates, sBanList, GameTime(), PickSchedule.initialized) == 'wait' then
+			return
 		end
 
 		-- Initialize schedule once preconditions are OK
