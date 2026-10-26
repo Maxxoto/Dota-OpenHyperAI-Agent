@@ -70,6 +70,11 @@ if not okBanner then print( '[OHA-LLM] banner failed: ' .. tostring( sBannerErr 
 -- with a no-op; the captured function keeps working after the override.
 local RealPrint = print
 
+-- Replies to !llm during hero selection are also drawn on screen: no bot hero
+-- exists yet (no chat speaker) and GameRules is not available in the bots VM.
+local sForkChatLine = nil
+local nForkChatUntil = 0
+
 -- Every channel is best-effort: console (RealPrint survives the override),
 -- message feed (GameRules), and team bot chat. Chat is the visible fallback
 -- when console output is unavailable.
@@ -1031,6 +1036,9 @@ function Think()
 		if okS and type( sPick ) == 'string' then
 			pcall( DebugDrawText, 0.70, 0.085, sPick, 0, 255, 170 )
 		end
+		if sForkChatLine ~= nil and GameTime() < nForkChatUntil then
+			pcall( DebugDrawText, 0.70, 0.12, sForkChatLine, 0, 255, 170 )
+		end
 	end
 	local okE, tPickEvents = pcall( LLMAdapter.DrainPickEvents )
 	if okE and type( tPickEvents ) == 'table' then
@@ -1123,6 +1131,8 @@ function SelectHeroChatCallback(PlayerID, ChatText, bTeamOnly)
 		-- only loads at bot spawn, so its chat callback is absent during draft.
 		local sLLMReply = LLM_Commands.HandleChatCommand( text )
 		if sLLMReply ~= nil then
+			sForkChatLine = sLLMReply
+			nForkChatUntil = GameTime() + 10
 			LLMBroadcast( sLLMReply )
 			return
 		end
