@@ -192,7 +192,7 @@ You can start a bot game directly from the console without network or clicking U
 
 ## Developer Documentation
 
-This project uses [Claude Code](https://claude.ai/claude-code) for AI-assisted development. The [CLAUDE.md](CLAUDE.md) file provides task-specific instructions for common operations like patch updates, hero fixes, and adding new heroes.
+This project is developed with AI coding agents (Claude Code, Codex, OpenCode, ...). The [AGENT.md](AGENT.md) file is the shared agent instruction set for common operations like patch updates, hero fixes, and adding new heroes.
 
 ### Key Docs
 
@@ -201,7 +201,7 @@ This project uses [Claude Code](https://claude.ai/claude-code) for AI-assisted d
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)             | Complete codebase architecture, file map, naming conventions, all systems explained |
 | [docs/PATCH_UPDATE_GUIDE.md](docs/PATCH_UPDATE_GUIDE.md) | Step-by-step runbook for updating when a new Dota 2 patch drops                     |
 | [docs/BOT_API_REFERENCE.md](docs/BOT_API_REFERENCE.md)   | Comprehensive Valve bot scripting API reference with examples                       |
-| [CLAUDE.md](CLAUDE.md)                                   | AI coding assistant guide - common tasks, rules, and workflows                      |
+| [AGENT.md](AGENT.md)                                     | Agent instruction set - common tasks, rules, and workflows                          |
 
 ### Internal Name References
 
@@ -267,6 +267,44 @@ root: <Steam/steamapps/common/dota 2 beta/game/dota/scripts/vscripts>
 -   Custom item/skill builds don't need PRs - just tweak locally
 -   Future development is in **TypeScript** for better maintainability
 -   [Open feature requests](https://github.com/forest0xia/dota2bot-OpenHyperAI/issues?q=is%3Aissue+is%3Aopen+%5BFeature+request%5D)
+
+### Commit Convention
+
+This repo follows [Conventional Commits](https://www.conventionalcommits.org/). Every commit message starts with a type, then an optional scope, then a short imperative subject:
+
+```
+<type>(<scope>): <subject>
+```
+
+| Type       | Use for                                                             |
+| ---------- | ------------------------------------------------------------------- |
+| `feat`     | A new feature or capability (bot behavior, LLM layer, chat command) |
+| `fix`      | A bug fix (crashes, wrong output, broken hero/build logic)          |
+| `chore`    | Maintenance that changes no behavior (installer scripts, gitignore) |
+| `docs`     | Documentation only (README, AGENT.md, docs/)                        |
+| `refactor` | Code restructuring with no behavior change                          |
+| `test`     | Adding or fixing tests                                              |
+| `build`    | Build system or dependency changes (tsconfig, tstl, package.json)   |
+| `ci`       | CI/workflow configuration                                           |
+| `perf`     | Performance improvements                                            |
+| `revert`   | Reverting a previous commit                                         |
+
+Examples:
+
+```
+feat(draft): add LLM counter-pick adapter
+fix(chat): strip markdown from Groq replies
+docs: add commit convention to README
+chore(install): auto-detect Steam path on Windows
+```
+
+Rules:
+
+-   Subject in lowercase imperative mood, no trailing period, under ~72 chars.
+-   Scope is optional; use the subsystem (`draft`, `builds`, `chat`, `install`, `docs`, ...).
+-   Breaking change: add `!` after the type/scope (`feat(api)!: ...`) and a `BREAKING CHANGE:` footer.
+-   Group unrelated changes into separate commits instead of one broad commit.
+-   Generated Lua from TypeScript ships with the TS change that produced it, in the same commit.
 
 ---
 

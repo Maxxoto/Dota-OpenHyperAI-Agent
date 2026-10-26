@@ -1,4 +1,8 @@
-# Dota 2 Bot Scripts - Claude Code Guide
+# Dota 2 Bot Scripts - Agent Guide
+
+> **Agent instruction (read first):** before doing anything in this repository, read [README.md](README.md) — it covers what this project is, how the fork installs into Dota 2, the in-game commands, the LLM advisor setup, and the commit convention. Then use the task guides below.
+
+This file is the shared instruction set for any coding agent (Claude Code, Codex, OpenCode, Cursor, etc.) working in this repo.
 
 ## Project Overview
 
@@ -6,8 +10,9 @@ This is the **dota2bot-OpenHyperAI** project -- Lua bot scripts for Dota 2 that 
 
 ## Key Documentation
 
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** -- Complete codebase architecture, file map, naming conventions, all systems explained
-- **[docs/PATCH_UPDATE_GUIDE.md](docs/PATCH_UPDATE_GUIDE.md)** -- Step-by-step runbook for updating when a new Dota 2 patch drops
+-   **[README.md](README.md)** -- read this FIRST: project overview, fork install, in-game commands, LLM advisor setup, commit convention
+-   **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** -- Complete codebase architecture, file map, naming conventions, all systems explained
+-   **[docs/PATCH_UPDATE_GUIDE.md](docs/PATCH_UPDATE_GUIDE.md)** -- Step-by-step runbook for updating when a new Dota 2 patch drops
 
 **Read these docs FIRST before making any changes.** They contain everything needed to make targeted updates without scanning the entire repo.
 
@@ -16,6 +21,7 @@ This is the **dota2bot-OpenHyperAI** project -- Lua bot scripts for Dota 2 that 
 ### Check for New Patches
 
 To check if there are patches we haven't updated for:
+
 1. Fetch `https://www.dota2.com/datafeed/patchnoteslist?language=english`
 2. Compare latest version against "Last updated for" in `docs/PATCH_UPDATE_GUIDE.md`
 3. If newer patch exists, follow the update process below
@@ -53,8 +59,8 @@ When user says "update for patch X.XX" or provides patch notes:
 
 ## Important Rules
 
-- **Use `GetItemComponents()` for item recipes** -- don't hardcode component arrays
-- **Use `sAbilityList[N]` references** when possible -- resilient to ability renames
-- **Always update BOTH neutral item files** (Buff/ AND FretBots/)
-- **Verify on Liquipedia** before trusting patch note summaries about ability names
-- **Test in-game** after changes -- some things can only be verified at runtime
+-   **Use `GetItemComponents()` for item recipes** -- don't hardcode component arrays
+-   **Use `sAbilityList[N]` references** when possible -- resilient to ability renames
+-   **Always update BOTH neutral item files** (Buff/ AND FretBots/)
+-   **Verify on Liquipedia** before trusting patch note summaries about ability names
+-   **Test in-game** after changes -- some things can only be verified at runtime
