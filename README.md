@@ -142,6 +142,10 @@ The model returns one of two tool calls, `swap_lane` (lane word: safe, mid, off)
 
 Swaps are capped at 4 per game with a 30 second cooldown between them. A message only reaches the model when it names a hero and a command word, so ordinary banter costs no calls. The `!pos`, `!3pos`, `!pick` and `!ban` commands still work exactly as before.
 
+### Cross-Match Memory
+
+After a game, feed the log back so the next draft remembers: `node scripts/learn.mjs "<...>\dota 2 beta\game\console.log"` (requires `-condebug`) parses the `[OHA-LLM]` lines and rewrites the gitignored `game/Customize/memory.lua`; every later draft ask reads its notes. Chain a few games and the counter-picks start adapting to your habits.
+
 ### Bot Identity
 
 Every bot gets a seeded persona, built once per game from its hero and the match clock: a handle (`axe_enjoyer`), an archetype (cocky, stoic, chatty), a voice, and catchphrases. That persona speaks the bot's chat replies and its compliance lines, so a suggestion sounds like a player on your team instead of a system message.
