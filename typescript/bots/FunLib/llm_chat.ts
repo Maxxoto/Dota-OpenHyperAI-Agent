@@ -44,9 +44,10 @@ export function MaybeReply(
 	}
 	inFlight = true;
 	const prompts = BuildChatPrompts(ctx);
-	Gateway.Ask("chat", prompts.system, prompts.user, 45, (ok, text) => {
+	Gateway.Ask("chat", prompts.system, prompts.user, 45, (ok, text, via, reason) => {
 		inFlight = false;
 		if (!ok) {
+			print("[OHA-LLM] chat fallback via=" + via + " reason=" + (reason !== undefined ? reason : "n/a"));
 			onReply(undefined);
 			return;
 		}

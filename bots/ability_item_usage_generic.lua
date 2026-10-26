@@ -592,8 +592,9 @@ function X.SetReplyHumanTime( tChat )
 		J.Role.SetLastChatString( sChatString )
 	end
 		
+	-- Any human line is reply-worthy, team chat or all chat. Before this, all
+	-- chat from your own team was dropped here, so the reply bot never ran.
 	if not IsPlayerBot( nChatID )
-		and ( tChat.team_only or J.Role.IsEnemyMemberID( nChatID ) )
 	then
 		sHumanString = sChatString
 		nHumanID = nChatID

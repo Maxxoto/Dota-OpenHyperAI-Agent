@@ -28,9 +28,10 @@ function ____exports.MaybeReply(ctx, now, onReply)
         prompts.system,
         prompts.user,
         45,
-        function(ok, text)
+        function(ok, text, via, reason)
             inFlight = false
             if not ok then
+                print((("[OHA-LLM] chat fallback via=" .. via) .. " reason=") .. (reason ~= nil and reason or "n/a"))
                 onReply(nil)
                 return
             end
