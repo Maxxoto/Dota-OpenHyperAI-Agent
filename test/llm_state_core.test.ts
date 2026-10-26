@@ -5,10 +5,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+    AppendMatchEvent,
     ClampText,
     DIRECTIVE_SCHEMA_V1,
     DraftPrompt,
     MatchPrompt,
+    NewMatchEventLog,
+    RenderLogTail,
     SerializeDraft,
     SerializeMatch,
     STATE_BUDGET_BYTES,
@@ -156,4 +159,67 @@ test("match serialization drops enemy detail in order, omits unknown towers", ()
     const prompt = MatchPrompt(baseMatch(), encode, STATE_BUDGET_BYTES);
     assert.ok(prompt.system.includes(DIRECTIVE_SCHEMA_V1));
     assert.ok(!prompt.overBudget);
+});
+
+test("AppendMatchEvent evicts the oldest entries past the cap", () => {
+    const log = NewMatchEventLog();
+    assert.equal(log.events.length, 0);
+    for (let i = 0; i < 30; i += 1) {
+        AppendMatchEvent(log, i, "event " + i);
+    }
+    assert.equal(log.events.length, 24);
+    assert.equal(log.events[0].text, "event 6");
+    assert.equal(log.events[23].text, "event 29");
+    const small = NewMatchEventLog();
+    AppendMatchEvent(small, 0, "a", 2);
+    AppendMatchEvent(small, 1, "b", 2);
+    AppendMatchEvent(small, 2, "c", 2);
+    assert.deepEqual(
+        small.events.map((e) => e.text),
+        ["b", "c"]
+    );
+});
+
+test("AppendMatchEvent trims text to 80 chars and keeps short text intact", () => {
+    const log = NewMatchEventLog();
+    AppendMatchEvent(log, 5, "x".repeat(120));
+    assert.equal(log.events[0].text.length, 80);
+    assert.equal(log.events[0].text, "x".repeat(80));
+    AppendMatchEvent(log, 6, "short line");
+    assert.equal(log.events[1].text, "short line");
+});
+
+test("AppendMatchEvent ignores empty text", () => {
+    const log = NewMatchEventLog();
+    AppendMatchEvent(log, 10, "");
+    assert.equal(log.events.length, 0);
+    AppendMatchEvent(log, 11, "kept");
+    assert.equal(log.events.length, 1);
+});
+
+test("RenderLogTail formats MM:SS with zero padding", () => {
+    const log = NewMatchEventLog();
+    AppendMatchEvent(log, 195, "roshan fight");
+    assert.equal(RenderLogTail(log), "03:15 roshan fight");
+    const early = NewMatchEventLog();
+    AppendMatchEvent(early, 5, "bounty rune");
+    assert.equal(RenderLogTail(early), "00:05 bounty rune");
+});
+
+test("RenderLogTail keeps the newest line even when over budget", () => {
+    const log = NewMatchEventLog();
+    AppendMatchEvent(log, 60, "old event here");
+    AppendMatchEvent(log, 120, "newest event");
+    assert.equal(RenderLogTail(log, 4), "02:00 newest event");
+});
+
+test("RenderLogTail renders oldest-first and drops the oldest lines first", () => {
+    const log = NewMatchEventLog();
+    AppendMatchEvent(log, 0, "first");
+    AppendMatchEvent(log, 65, "second");
+    AppendMatchEvent(log, 195, "third");
+    assert.equal(RenderLogTail(log), "00:00 first\n01:05 second\n03:15 third");
+    // 12 + 1 + 11 = 24 bytes fits the two newest lines exactly
+    assert.equal(RenderLogTail(log, 24), "01:05 second\n03:15 third");
+    assert.equal(RenderLogTail(NewMatchEventLog()), "");
 });

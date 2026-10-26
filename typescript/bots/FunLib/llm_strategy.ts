@@ -40,12 +40,25 @@ export function StrategyEnabled(): boolean {
 	return Enabled("desire");
 }
 
+/** Match JSON plus the rendered event tail (RFC-002 §8) when one is supplied. */
+function UserPayload(matchJson: string, memoryTail: string | undefined): string {
+	if (memoryTail === undefined) {
+		return matchJson;
+	}
+	const tail = memoryTail.trim();
+	if (tail === "") {
+		return matchJson;
+	}
+	return matchJson + "\n\nRecent match events:\n" + tail;
+}
+
 /** One non-blocking checkpoint ask; onDone always fires exactly once. */
 export function AskStrategy(
 	matchJson: string,
-	onDone: (d: StrategyDirective | undefined) => void
+	onDone: (d: StrategyDirective | undefined) => void,
+	memoryTail?: string | undefined
 ): void {
-	Ask("desire", SYSTEM_PROMPT, matchJson, STRATEGY_TTL_SEC, (ok, text) => {
+	Ask("desire", SYSTEM_PROMPT, UserPayload(matchJson, memoryTail), STRATEGY_TTL_SEC, (ok, text) => {
 		if (!ok) {
 			onDone(undefined);
 			return;

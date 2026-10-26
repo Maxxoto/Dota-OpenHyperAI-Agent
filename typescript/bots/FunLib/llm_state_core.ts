@@ -281,3 +281,56 @@ export function MatchPrompt(ctx: MatchContext, encode: Encoder, budgetBytes: num
     const res = SerializeMatch(ctx, encode, budgetBytes);
     return { system: MatchSystemPrompt(), user: res.json, dropped: res.dropped, overBudget: res.overBudget };
 }
+
+export interface MatchEvent {
+    at: number;
+    text: string;
+}
+
+export interface MatchEventLog {
+    events: MatchEvent[];
+}
+
+export function NewMatchEventLog(): MatchEventLog {
+    return { events: [] };
+}
+
+function PadTwo(value: number): string {
+    return value < 10 ? "0" + String(value) : String(value);
+}
+
+function FormatMatchEvent(ev: MatchEvent): string {
+    return PadTwo(Math.floor(ev.at / 60)) + ":" + PadTwo(Math.floor(ev.at % 60)) + " " + ev.text;
+}
+
+/** Append one event, evicting the oldest past maxEvents and trimming text to 80 chars. */
+export function AppendMatchEvent(log: MatchEventLog, at: number, text: string, maxEvents = 24): void {
+    if (text === "") {
+        return;
+    }
+    log.events.push({ at, text: text.length > 80 ? text.slice(0, 80) : text });
+    const over = log.events.length - maxEvents;
+    for (let i = 0; i < over; i += 1) {
+        log.events.shift();
+    }
+}
+
+/** Render the newest log events, oldest-first, within a byte budget (newest line always kept). */
+export function RenderLogTail(log: MatchEventLog, budgetBytes = 600): string {
+    const newestFirst: string[] = [];
+    let used = 0;
+    for (let i = log.events.length - 1; i >= 0; i -= 1) {
+        const line = FormatMatchEvent(log.events[i]);
+        const cost = newestFirst.length === 0 ? line.length : line.length + 1;
+        if (newestFirst.length > 0 && used + cost > budgetBytes) {
+            break;
+        }
+        newestFirst.push(line);
+        used += cost;
+    }
+    const ordered: string[] = [];
+    for (let i = newestFirst.length - 1; i >= 0; i -= 1) {
+        ordered.push(newestFirst[i]);
+    }
+    return ordered.join("\n");
+}

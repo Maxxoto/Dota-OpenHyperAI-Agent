@@ -256,4 +256,65 @@ function ____exports.MatchPrompt(ctx, encode, budgetBytes)
         overBudget = res.overBudget
     }
 end
+function ____exports.NewMatchEventLog()
+    return {events = {}}
+end
+local function PadTwo(value)
+    return value < 10 and "0" .. String(nil, value) or String(nil, value)
+end
+local function FormatMatchEvent(ev)
+    return (((PadTwo(math.floor(ev.at / 60)) .. ":") .. PadTwo(math.floor(ev.at % 60))) .. " ") .. ev.text
+end
+--- Append one event, evicting the oldest past maxEvents and trimming text to 80 chars.
+function ____exports.AppendMatchEvent(log, at, text, maxEvents)
+    if maxEvents == nil then
+        maxEvents = 24
+    end
+    if text == "" then
+        return
+    end
+    local ____log_events_0 = log.events
+    ____log_events_0[#____log_events_0 + 1] = {
+        at = at,
+        text = #text > 80 and string.sub(text, 1, 80) or text
+    }
+    local over = #log.events - maxEvents
+    do
+        local i = 0
+        while i < over do
+            table.remove(log.events, 1)
+            i = i + 1
+        end
+    end
+end
+--- Render the newest log events, oldest-first, within a byte budget (newest line always kept).
+function ____exports.RenderLogTail(log, budgetBytes)
+    if budgetBytes == nil then
+        budgetBytes = 600
+    end
+    local newestFirst = {}
+    local used = 0
+    do
+        local i = #log.events - 1
+        while i >= 0 do
+            local line = FormatMatchEvent(log.events[i + 1])
+            local cost = #newestFirst == 0 and #line or #line + 1
+            if #newestFirst > 0 and used + cost > budgetBytes then
+                break
+            end
+            newestFirst[#newestFirst + 1] = line
+            used = used + cost
+            i = i - 1
+        end
+    end
+    local ordered = {}
+    do
+        local i = #newestFirst - 1
+        while i >= 0 do
+            ordered[#ordered + 1] = newestFirst[i + 1]
+            i = i - 1
+        end
+    end
+    return table.concat(ordered, "\n")
+end
 return ____exports

@@ -46,6 +46,48 @@ local nLLMStrategyAsked = 0
 local nLLMIdentitySeed = nil
 local bLLMIdentityAnnounced = false
 
+-- Self-observation event log (RFC-002 §8): the advisor records what it did and
+-- feeds the rendered tail into its next asks. Every call is pcall-guarded, so a
+-- missing or stale llm_state_core build just leaves the log empty (G5).
+local LLMStateCore = nil
+local tLLMEventLog = nil
+
+local function LLMEnsureEventLog()
+	if tLLMEventLog ~= nil then return tLLMEventLog end
+	if LLMStateCore == nil then
+		local ok, mod = pcall( require, GetScriptDirectory()..'/FunLib/llm_state_core' )
+		if ok and type( mod ) == 'table' then LLMStateCore = mod end
+	end
+	if LLMStateCore == nil or type( LLMStateCore.NewMatchEventLog ) ~= 'function' then return nil end
+	local ok, log = pcall( LLMStateCore.NewMatchEventLog )
+	if ok and type( log ) == 'table' then tLLMEventLog = log end
+	return tLLMEventLog
+end
+
+local function LLMLogEvent( sText )
+	if type( sText ) ~= 'string' or sText == '' then return end
+	local log = LLMEnsureEventLog()
+	local core = LLMStateCore
+	if log == nil or core == nil or type( core.AppendMatchEvent ) ~= 'function' then return end
+	local nAt = 0
+	local okTime, now = pcall( DotaTime )
+	if okTime and type( now ) == 'number' and now > 0 then nAt = now end
+	pcall( core.AppendMatchEvent, log, nAt, sText )
+end
+
+local function LLMMemoryTail()
+	local log = tLLMEventLog
+	local core = LLMStateCore
+	if log == nil or core == nil or type( core.RenderLogTail ) ~= 'function' then return '' end
+	local ok, sTail = pcall( core.RenderLogTail, log )
+	if ok and type( sTail ) == 'string' then return sTail end
+	return ''
+end
+
+function J.GetLLMMemoryTail()
+	return LLMMemoryTail()
+end
+
 local function LLMStrategyModules()
 	if LLMStrategy == nil then
 		local ok, mod = pcall( require, GetScriptDirectory()..'/FunLib/llm_strategy' )
@@ -133,16 +175,21 @@ local function LLMStrategyTick( now )
 	nLLMStrategyAsked = nLLMStrategyAsked + 1
 	nLLMStrategyLastAskAt = now
 	local nAskIndex = nLLMStrategyAsked
+	LLMLogEvent( 'strategy ask #'..tostring( nAskIndex ) )
+	local sMemoryTail = LLMMemoryTail()
 	local okDispatch = pcall( strategy.AskStrategy, sMatch, function( d )
 		pcall( function()
 			if type( d ) ~= 'table' then return end
 			tLLMStrategyDirective = d
+			if type( d.stance ) == 'string' then
+				LLMLogEvent( 'strategy @'..tostring( nMinute )..'m: '..d.stance )
+			end
 			local okLine, sLine = pcall( strategy.StrategyAnnouncement, d, nMinute, nAskIndex, 8 )
 			if okLine and type( sLine ) == 'string' then
 				LLMAnnounceInGame( sLine )
 			end
 		end )
-	end )
+	end, sMemoryTail )
 	if not okDispatch then
 		nLLMStrategyAsked = nLLMStrategyAsked - 1
 		nLLMStrategyLastAskAt = -999
@@ -193,6 +240,7 @@ function J.SetUserHeroInit( nAbilityBuildList, nTalentBuildList, sBuyList, sSell
 			if okB and hBot ~= nil then
 				pcall( hBot.ActionImmediate_Chat, hBot, sAnn, false )
 			end
+			LLMLogEvent( botName..' build applied pos '..tostring( build.pos ) )
 			-- Identity card (RFC-002 §6): one stable per-game persona line, voiced
 			-- through the same visible channels as the build announcement.
 			if not bLLMIdentityAnnounced then
@@ -205,6 +253,10 @@ function J.SetUserHeroInit( nAbilityBuildList, nTalentBuildList, sBuyList, sSell
 					local okIdentityLine, sIdentityLine = pcall( LLMIdentity.IdentityAnnouncement, botName, nLLMIdentitySeed )
 					if okIdentityLine and type( sIdentityLine ) == 'string' then
 						bLLMIdentityAnnounced = true
+						local okCard, card = pcall( LLMIdentity.IdentityFor, botName, nLLMIdentitySeed )
+						if okCard and type( card ) == 'table' and type( card.handle ) == 'string' then
+							LLMLogEvent( card.handle..' spawned' )
+						end
 						LLMAnnounceInGame( sIdentityLine )
 					end
 				end

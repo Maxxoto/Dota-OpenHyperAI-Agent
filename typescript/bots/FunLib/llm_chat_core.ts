@@ -37,6 +37,9 @@ export interface ChatContext {
 	catchphrases?: string[] | undefined;
 	chanceMultiplier?: number | undefined;
 	cooldownMultiplier?: number | undefined;
+	// Self-observation memory (RFC-002 §8): the rendered match-event tail, so a
+	// reply can reference what the team just did. Absent = no event section.
+	memoryTail?: string | undefined;
 }
 
 /**
@@ -121,13 +124,19 @@ export function BuildChatPrompts(ctx: ChatContext): { system: string; user: stri
 		ctx.speakerHero !== undefined && ctx.speakerHero !== ""
 			? ctx.speakerName + " (" + ctx.speakerHero + ")"
 			: ctx.speakerName;
-	const user = [
+	const lines: string[] = [
 		"You are " + ctx.botName + " playing " + ctx.hero + " for " + ctx.team + ".",
 		"Match: minute " + ctx.minute + ", your score " + ctx.kills + "/" + ctx.deaths + "/" + ctx.assists
 		+ ", net worth " + ctx.netWorth + " gold, bot difficulty " + ctx.difficulty + ".",
-		speaker + " said in chat: \"" + ctx.message + "\"",
-		"Write your one-line reply as " + ctx.botName + ".",
-	].join("\n");
+	];
+	// Self-observation (RFC-002 §8): what the team just did, ahead of the message.
+	const memoryTail = NonEmpty(ctx.memoryTail);
+	if (memoryTail !== "") {
+		lines.push("Recent match events:\n" + memoryTail);
+	}
+	lines.push(speaker + " said in chat: \"" + ctx.message + "\"");
+	lines.push("Write your one-line reply as " + ctx.botName + ".");
+	const user = lines.join("\n");
 	return { system: systemText, user };
 }
 

@@ -154,15 +154,17 @@ function ____exports.BuildChatPrompts(ctx)
     system[#system + 1] = TOOL_CONTRACT
     local systemText = table.concat(system, " ")
     local speaker = ctx.speakerHero ~= nil and ctx.speakerHero ~= "" and ((ctx.speakerName .. " (") .. ctx.speakerHero) .. ")" or ctx.speakerName
-    local user = table.concat(
-        {
-            ((((("You are " .. ctx.botName) .. " playing ") .. ctx.hero) .. " for ") .. ctx.team) .. ".",
-            ((((((((((("Match: minute " .. tostring(ctx.minute)) .. ", your score ") .. tostring(ctx.kills)) .. "/") .. tostring(ctx.deaths)) .. "/") .. tostring(ctx.assists)) .. ", net worth ") .. tostring(ctx.netWorth)) .. " gold, bot difficulty ") .. ctx.difficulty) .. ".",
-            ((speaker .. " said in chat: \"") .. ctx.message) .. "\"",
-            ("Write your one-line reply as " .. ctx.botName) .. "."
-        },
-        "\n"
-    )
+    local lines = {
+        ((((("You are " .. ctx.botName) .. " playing ") .. ctx.hero) .. " for ") .. ctx.team) .. ".",
+        ((((((((((("Match: minute " .. tostring(ctx.minute)) .. ", your score ") .. tostring(ctx.kills)) .. "/") .. tostring(ctx.deaths)) .. "/") .. tostring(ctx.assists)) .. ", net worth ") .. tostring(ctx.netWorth)) .. " gold, bot difficulty ") .. ctx.difficulty) .. "."
+    }
+    local memoryTail = NonEmpty(ctx.memoryTail)
+    if memoryTail ~= "" then
+        lines[#lines + 1] = "Recent match events:\n" .. memoryTail
+    end
+    lines[#lines + 1] = ((speaker .. " said in chat: \"") .. ctx.message) .. "\""
+    lines[#lines + 1] = ("Write your one-line reply as " .. ctx.botName) .. "."
+    local user = table.concat(lines, "\n")
     return {system = systemText, user = user}
 end
 local function Contains(text, needle)

@@ -52,12 +52,23 @@ end
 function ____exports.StrategyEnabled()
     return Enabled("desire")
 end
+--- Match JSON plus the rendered event tail (RFC-002 §8) when one is supplied.
+local function UserPayload(matchJson, memoryTail)
+    if memoryTail == nil then
+        return matchJson
+    end
+    local tail = __TS__StringTrim(memoryTail)
+    if tail == "" then
+        return matchJson
+    end
+    return (matchJson .. "\n\nRecent match events:\n") .. tail
+end
 --- One non-blocking checkpoint ask; onDone always fires exactly once.
-function ____exports.AskStrategy(matchJson, onDone)
+function ____exports.AskStrategy(matchJson, onDone, memoryTail)
     Ask(
         "desire",
         SYSTEM_PROMPT,
-        matchJson,
+        UserPayload(matchJson, memoryTail),
         STRATEGY_TTL_SEC,
         function(ok, text)
             if not ok then
