@@ -2,6 +2,27 @@
 
 These scripts create a symbolic link from the Steam Workshop download folder to the Dota 2 vscripts/bots folder. This lets the bot scripts load correctly in Custom Lobbies with **Local Host** server.
 
+### Installing a git clone of this fork
+
+The `quick-install-oha*` scripts install the **Steam Workshop** copy (bots only). A git clone needs both `bots/` and `game/` linked, plus the permanent config tier:
+
+| File                     | OS            |
+| ------------------------ | ------------- |
+| `quick-install-fork.ps1` | Windows       |
+| `quick-install-fork.sh`  | macOS / Linux |
+
+They back up any existing `bots` / `game` folders with a timestamp, link both from the clone, create `game/Customize` (config tier, gitignored) if missing, verify the links, and optionally write your Groq key as a one-line `game/Customize/llm.lua`.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File quick-install-fork.ps1
+```
+
+```bash
+./quick-install-fork.sh
+```
+
+FretBots still needs once per game in a Local Dev Script lobby: `sv_cheats 1; script_reload_code bots/fretbots` (the engine does not run `game/gameinit.lua` there).
+
 ### Available Scripts
 
 | File                         | OS      | Language |
