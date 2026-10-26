@@ -93,6 +93,10 @@ Customize.Enable_FretBots_By_Default = true
 -- Set this to false to disable the layer entirely; without a key, calls fail and bots behave as before.
 Customize.Allow_LLM_Advisor = true
 
+-- Fork: RFC-003 H1 gate. Gameplay humanization of mechanical rhythms (reaction
+-- delays, jittered timings). Default false = no behavior change.
+Customize.Allow_Humanized_Gameplay = false
+
 -- Set the level of bots' trash talks. Disable Allow_Trash_Talk can disable this.
 -- 1 => no trash talks from ally bots, no taunt from enemy after it gets a kill. 2 => ally bots also trash talk to you, allow taunt from enemy after it gets a kill.
 Customize.Trash_Talk_Level = 2
