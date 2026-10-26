@@ -35,6 +35,7 @@ local Utils = require( GetScriptDirectory()..'/FunLib/utils' )
 local Dota2Teams = require( GetScriptDirectory()..'/FunLib/aba_team_names' )
 local CaptainMode = require( GetScriptDirectory()..'/FunLib/captain_mode' )
 local LLMAdapter = require( GetScriptDirectory()..'/FunLib/llm_draft_adapter' )
+local LLM_Commands = require( GetScriptDirectory()..'/FunLib/llm_directive' )
 local Localization = require( GetScriptDirectory()..'/FunLib/localization' )
 local HeroPositionMap = require( GetScriptDirectory()..'/FunLib/aba_hero_pos_weights' )
 local heroUnitNames = require( GetScriptDirectory()..'/FretBots/HeroNames')
@@ -1109,6 +1110,13 @@ function SelectHeroChatCallback(PlayerID, ChatText, bTeamOnly)
 	end
 
 	if startsWithExclamation(text) then
+		-- !llm is handled here too: ability_item_usage_generic (the usual site)
+		-- only loads at bot spawn, so its chat callback is absent during draft.
+		local sLLMReply = LLM_Commands.HandleChatCommand( text )
+		if sLLMReply ~= nil then
+			LLMBroadcast( sLLMReply )
+			return
+		end
 		handleCommand(text, PlayerID, bTeamOnly)
 	end
 end
