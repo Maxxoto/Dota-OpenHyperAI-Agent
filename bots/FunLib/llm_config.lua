@@ -8,7 +8,7 @@ local function DefaultConfig()
         APIKey = "",
         TimeoutMs = 8000,
         MaxConcurrent = 1,
-        Phases = {draft = true, builds = true, desire = false, chat = true}
+        Phases = {draft = true, builds = true, desire = true, chat = true}
     }
 end
 local function AsBool(value, fallback)

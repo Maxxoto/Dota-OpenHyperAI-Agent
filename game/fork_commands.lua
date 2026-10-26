@@ -57,10 +57,19 @@ local function ConfigSummary()
 		keyState = "key=MISSING"
 	end
 	local phases = cfg.Phases or {}
-	return (where or "defaults") .. " Enable=" .. tostring(cfg.Enable ~= false)
+	local master = false
+	local okGeneral, customize = pcall(require, "game/Customize/general")
+	if okGeneral and type(customize) == "table" and customize.Allow_LLM_Advisor == true then
+		master = true
+	end
+	return (where or "defaults") .. " master=" .. tostring(master)
+		.. " Enable=" .. tostring(cfg.Enable ~= false)
 		.. " " .. keyState
 		.. " model=" .. tostring(cfg.Model)
 		.. " draft=" .. tostring(phases.draft ~= false)
+		.. " builds=" .. tostring(phases.builds ~= false)
+		.. " desire=" .. tostring(phases.desire ~= false)
+		.. " chat=" .. tostring(phases.chat ~= false)
 end
 
 function MODULE.OnPlayerChat(event)
