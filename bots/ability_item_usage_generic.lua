@@ -12,7 +12,11 @@ local J = require( GetScriptDirectory()..'/FunLib/jmz_func' )
 local Utils = require( GetScriptDirectory()..'/FunLib/utils' )
 local BotBuild = dofile( GetScriptDirectory().."/BotLib/"..string.gsub( botName, "npc_dota_", "" ) )
 local Localization = require( GetScriptDirectory()..'/FunLib/localization' )
-local LLM_Commands = require( GetScriptDirectory()..'/FunLib/llm_directive' )
+local okLLMCommands, LLM_Commands = pcall( require, GetScriptDirectory()..'/FunLib/llm_directive' )
+if not okLLMCommands then
+	pcall( print, '[OHA-LLM] !llm module failed to load: '..tostring( LLM_Commands ) )
+	LLM_Commands = { HandleChatCommand = function() return nil end }
+end
 local Customize = require(GetScriptDirectory()..'/Customize/general')
 Customize.ThinkLess = Customize.Enable and Customize.ThinkLess or 1
 if GAMEMODE_TURBO == nil then GAMEMODE_TURBO = 23 end

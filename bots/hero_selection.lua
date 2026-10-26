@@ -35,8 +35,23 @@ local Role = require( GetScriptDirectory()..'/FunLib/aba_role' )
 local Utils = require( GetScriptDirectory()..'/FunLib/utils' )
 local Dota2Teams = require( GetScriptDirectory()..'/FunLib/aba_team_names' )
 local CaptainMode = require( GetScriptDirectory()..'/FunLib/captain_mode' )
-local LLMAdapter = require( GetScriptDirectory()..'/FunLib/llm_draft_adapter' )
-local LLM_Commands = require( GetScriptDirectory()..'/FunLib/llm_directive' )
+-- A throw in either LLM module used to abort this whole file, which silently
+-- killed hero picking, !pick/!ban and the FretBots note. Load them defensively.
+local okAdapter, LLMAdapter = pcall( require, GetScriptDirectory()..'/FunLib/llm_draft_adapter' )
+if not okAdapter then
+	pcall( print, '[OHA-LLM] draft adapter failed to load: '..tostring( LLMAdapter ) )
+	LLMAdapter = {
+		AdjustScore = function( sHero, nBase ) return nBase end,
+		DraftStep = function() return 'go' end,
+		PickStatus = function() return 'draft adapter offline' end,
+		DrainPickEvents = function() return {} end,
+	}
+end
+local okCommands, LLM_Commands = pcall( require, GetScriptDirectory()..'/FunLib/llm_directive' )
+if not okCommands then
+	pcall( print, '[OHA-LLM] command module failed to load: '..tostring( LLM_Commands ) )
+	LLM_Commands = { HandleChatCommand = function() return nil end }
+end
 local Localization = require( GetScriptDirectory()..'/FunLib/localization' )
 local HeroPositionMap = require( GetScriptDirectory()..'/FunLib/aba_hero_pos_weights' )
 local heroUnitNames = require( GetScriptDirectory()..'/FretBots/HeroNames')
