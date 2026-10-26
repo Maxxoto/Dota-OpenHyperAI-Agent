@@ -88,9 +88,12 @@ local function ForkLog(msg)
 		end
 	end )
 	pcall( function()
-		local hMember = GetTeamMember( 5 )
-		if hMember ~= nil and hMember.ActionImmediate_Chat ~= nil then
-			hMember:ActionImmediate_Chat( msg, true )
+		for i = 1, 5 do
+			local hMember = GetTeamMember( i )
+			if hMember ~= nil and hMember.ActionImmediate_Chat ~= nil then
+				hMember:ActionImmediate_Chat( msg, true )
+				break
+			end
 		end
 	end )
 end
