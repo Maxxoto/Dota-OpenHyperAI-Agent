@@ -52,6 +52,19 @@ function MODULE.Try()
 	if ok and Debug ~= nil then
 		started = true
 		Log("[OHA] FretBots mode initialized (addon VM)")
+		-- Verify the vote pipeline actually came up; the difficulty vote only
+		-- opens from Settings' timers, so report each pillar visibly.
+		pcall(function()
+			local hasSettings = type(Settings) == "table"
+			local hasTimers = type(Timers) == "table"
+			local ticking = hasTimers and type(Timers.timers) == "table"
+			Log("[OHA] FretBots verify: Settings=" .. tostring(hasSettings)
+				.. " Timers=" .. tostring(hasTimers) .. " ticking=" .. tostring(ticking))
+			if hasTimers and not ticking then
+				Timers:start()
+				Log("[OHA] FretBots timer engine started explicitly")
+			end
+		end)
 		return
 	end
 	package.loaded["bots/FretBots"] = nil
