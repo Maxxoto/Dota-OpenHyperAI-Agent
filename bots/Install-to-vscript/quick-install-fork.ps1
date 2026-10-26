@@ -62,7 +62,7 @@ if (-not (Test-Path $cust)) {
     Write-Host "Created $cust with a copy of general.lua"
 }
 
-foreach ($f in @("bots\hero_selection.lua", "game\gameinit.lua", "game\fretbots_autostart.lua")) {
+foreach ($f in @("bots\hero_selection.lua", "game\gameinit.lua", "game\fretbots_autostart.lua", "game\fork_commands.lua")) {
     if (-not (Test-Path (Join-Path $VScripts $f))) { Fail "verification failed for $f" }
 }
 
