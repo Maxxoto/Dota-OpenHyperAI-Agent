@@ -81,6 +81,18 @@ if ($key) {
     Write-Host "No key set. Edit $llmLua and fill in APIKey later."
 }
 
+# Existing installs keep their own general.lua; raise the old default (level 1
+# allows no team-chat replies) so the new default applies without a manual edit.
+$general = Join-Path $cust "general.lua"
+if (Test-Path $general) {
+    $text = [IO.File]::ReadAllText($general)
+    if ($text -match 'Customize\.Trash_Talk_Level = 1') {
+        $text = $text -replace 'Customize\.Trash_Talk_Level = 1', 'Customize.Trash_Talk_Level = 2'
+        [IO.File]::WriteAllText($general, $text)
+        Write-Host "Raised Customize.Trash_Talk_Level to 2 in $general"
+    }
+}
+
 Write-Host ""
 if (Test-Path $llmLua) {
     Write-Host "LLM config: $llmLua"
