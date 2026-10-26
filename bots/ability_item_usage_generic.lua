@@ -463,6 +463,25 @@ function X.SetTalkMessage()
 						pcall( bot.ActionImmediate_Chat, bot, sText, bAllChat )
 						nReplyHumanCount = nReplyHumanCount + 1
 						nTalkDelay = RandomInt( 6, 30 )/10
+						return
+					end
+					-- The model answered nothing: speak the local table reply so a human
+					-- message is never left unanswered just because an ask failed.
+					local sLocal = J.Chat.GetReplyString( sHumanString, bAllChat )
+					if sLocal ~= nil then
+						pcall( bot.ActionImmediate_Chat, bot, sLocal, bAllChat )
+						nReplyHumanCount = nReplyHumanCount + 1
+						nTalkDelay = RandomInt( 6, 30 )/10
+						return
+					end
+					local sWhy = '[OHA-LLM] chat: no reply this time (model silent and Trash_Talk_Level='
+						..tostring( Customize.Trash_Talk_Level )..' denies '
+						..( bAllChat and 'all-chat' or 'team-chat' )..' local lines)'
+					local okFL, FL = pcall( require, GetScriptDirectory()..'/FunLib/fork_log' )
+					if okFL and type( FL ) == 'table' and FL.ForkLog then
+						pcall( FL.ForkLog, sWhy )
+					else
+						pcall( print, sWhy )
 					end
 				end )
 				if okQ and sStatus == 'asked' then bLLMAsked = true end

@@ -9,6 +9,7 @@
  * reply cooldown by llm_chat_core's limiter (no per-game cap).
  */
 import * as Gateway from "./llm_gateway";
+import { ForkLog } from "./fork_log";
 import {
 	BuildChatPrompts,
 	SanitizeChatReply,
@@ -47,7 +48,7 @@ export function MaybeReply(
 	Gateway.Ask("chat", prompts.system, prompts.user, 45, (ok, text, via, reason) => {
 		inFlight = false;
 		if (!ok) {
-			print("[OHA-LLM] chat fallback via=" + via + " reason=" + (reason !== undefined ? reason : "n/a"));
+			ForkLog("[OHA-LLM] chat fallback via=" + via + " reason=" + (reason !== undefined ? reason : "n/a"));
 			onReply(undefined);
 			return;
 		}
