@@ -452,7 +452,12 @@ function X.SetTalkMessage()
 			-- async: the callback needs its own copy of the line it answers.
 			local sHeard = sHumanString
 			local bHeardAllChat = bAllChat
+			local bLLMChatOn = false
 			local okCC, LLMChat = pcall( require, GetScriptDirectory()..'/FunLib/llm_chat' )
+			if okCC and type( LLMChat ) == 'table' and LLMChat.ChatEnabled then
+				local okEn, bEn = pcall( LLMChat.ChatEnabled )
+				bLLMChatOn = okEn and bEn == true
+			end
 			if okCC and type( LLMChat ) == 'table' and LLMChat.MaybeReply then
 				local nID = bot:GetPlayerID()
 				local sSpeaker = 'player'
@@ -480,42 +485,38 @@ function X.SetTalkMessage()
 						nTalkDelay = RandomInt( 6, 30 )/10
 						return
 					end
-					-- The model answered nothing: speak the local table reply so a human
-					-- message is never left unanswered just because an ask failed.
-					local sLocal = J.Chat.GetReplyString( sHeard, bHeardAllChat )
-					if sLocal ~= nil then
-						pcall( bot.ActionImmediate_Chat, bot, sLocal, bHeardAllChat )
-						nReplyHumanCount = nReplyHumanCount + 1
-						nTalkDelay = RandomInt( 6, 30 )/10
-						return
-					end
-					local sWhy = '[OHA-LLM] chat: no reply this time (model silent and Trash_Talk_Level='
-						..tostring( Customize.Trash_Talk_Level )..' denies '
-						..( bHeardAllChat and 'all-chat' or 'team-chat' )..' local lines)'
+					-- The model answered nothing. Chat lines are LLM-only by design: do
+					-- not fall back to the constant table, just say why in the log.
+					local sWhy = '[OHA-LLM] chat: model gave no answer'
+						..' (via/level='..tostring( Customize.Trash_Talk_Level )..')'
 					ChatDiag( sWhy )
 				end )
 				if okQ and sStatus == 'asked' then bLLMAsked = true end
 			end
 			if not bLLMAsked then
-				local chatString = J.Chat.GetReplyString( sHumanString, bAllChat )
-				if chatString ~= nil
-				then
-					if nReplyHumanCount == nMaxReplyCount
+				if not bLLMChatOn then
+					local chatString = J.Chat.GetReplyString( sHumanString, bAllChat )
+					if chatString ~= nil
 					then
-						local sStop = J.Chat.GetStopReplyString()
-						if sStop ~= nil then chatString = sStop end
+						if nReplyHumanCount == nMaxReplyCount
+						then
+							local sStop = J.Chat.GetStopReplyString()
+							if sStop ~= nil then chatString = sStop end
+						end
+
+						bot:ActionImmediate_Chat( chatString, bAllChat )
+
+						nReplyHumanCount = nReplyHumanCount + 1
+						nTalkDelay = RandomInt( 6, 30 )/10
+						if nTalkDelay > 2.0 then nTalkDelay = RandomInt( 6, 30 )/10 end
+					else
+						ChatDiag( '[OHA-LLM] chat: local reply denied (Allow_Trash_Talk='
+							..tostring( Customize.Allow_Trash_Talk )..' level='
+							..tostring( Customize.Trash_Talk_Level )..' channel='
+							..( bAllChat and 'all' or 'team' )..')' )
 					end
-
-					bot:ActionImmediate_Chat( chatString, bAllChat )
-
-					nReplyHumanCount = nReplyHumanCount + 1
-					nTalkDelay = RandomInt( 6, 30 )/10
-					if nTalkDelay > 2.0 then nTalkDelay = RandomInt( 6, 30 )/10 end
 				else
-					ChatDiag( '[OHA-LLM] chat: local reply denied (Allow_Trash_Talk='
-						..tostring( Customize.Allow_Trash_Talk )..' level='
-						..tostring( Customize.Trash_Talk_Level )..' channel='
-						..( bAllChat and 'all' or 'team' )..')' )
+					ChatDiag( '[OHA-LLM] chat: llm enabled but no ask this tick (cooldown or in flight)' )
 				end
 			end
 			sHumanString = nil
