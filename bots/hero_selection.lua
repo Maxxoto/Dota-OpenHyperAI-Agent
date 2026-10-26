@@ -1309,3 +1309,83 @@ function GetSelectedHumanHero(team)
 		end
 	end
 end
+
+--==============================================================================
+-- [OHA-LLM] Chat tool bridge
+--==============================================================================
+
+-- Moves a teammate bot to a position, keyed by its selected hero instead of
+-- the player who typed. Reuses the !pos mechanism verbatim: swap the two
+-- RoleAssignment entries and keep tLaneAssignList in sync (Dire lanes are
+-- addressed through CorrectDirePlayerIndexToLaneIndex, exactly as !pos does).
+-- pcall-guarded internally; returns true only when the swap landed.
+function X.SetBotPosition( sHeroInternalName, nPos )
+	local ok, bOk = pcall( function()
+		if type( sHeroInternalName ) ~= 'string' or sHeroInternalName == '' then return false end
+		local nRole = tonumber( nPos )
+		if nRole == nil or nRole ~= math.floor( nRole ) or nRole < 1 or nRole > 5 then return false end
+
+		local sTeamName = GetTeam() == TEAM_RADIANT and 'TEAM_RADIANT' or 'TEAM_DIRE'
+		local tPlayers = GetTeamPlayers( GetTeam() )
+
+		local nBotIndex = nil
+		for idx, id in pairs( tPlayers ) do
+			if GetSelectedHeroName( id ) == sHeroInternalName then
+				nBotIndex = idx
+				break
+			end
+		end
+		if nBotIndex == nil then
+			print( '[OHA-LLM] SetBotPosition: hero not on team '..tostring( sHeroInternalName ) )
+			return false
+		end
+		if not IsPlayerBot( tPlayers[ nBotIndex ] ) then
+			print( '[OHA-LLM] SetBotPosition: hero is human '..tostring( sHeroInternalName ) )
+			return false
+		end
+
+		local tRoles = Role.RoleAssignment[ sTeamName ]
+		if type( tRoles ) ~= 'table' then return false end
+		if tRoles[ nBotIndex ] == nRole then return true end
+
+		local nHolder = nil
+		for idx = 1, 5 do
+			if tRoles[ idx ] == nRole then
+				nHolder = idx
+				break
+			end
+		end
+		if nHolder == nil then return false end
+		if not IsPlayerBot( tPlayers[ nHolder ] or -1 ) then
+			print( '[OHA-LLM] SetBotPosition: pos '..nRole..' belongs to a human' )
+			return false
+		end
+
+		local nOldRole = tRoles[ nBotIndex ]
+		tRoles[ nBotIndex ] = nRole
+		tRoles[ nHolder ] = nOldRole
+
+		local tLanes = tLaneAssignList[ sTeamName ]
+		if type( tLanes ) == 'table' then
+			if GetTeam() == TEAM_DIRE then
+				local nA = CorrectDirePlayerIndexToLaneIndex[ nBotIndex ]
+				local nB = CorrectDirePlayerIndexToLaneIndex[ nHolder ]
+				if nA ~= nil and nB ~= nil then
+					tLanes[ nA ], tLanes[ nB ] = tLanes[ nB ], tLanes[ nA ]
+				end
+			else
+				tLanes[ nBotIndex ], tLanes[ nHolder ] = tLanes[ nHolder ], tLanes[ nBotIndex ]
+			end
+		end
+
+		print( '[OHA-LLM] SetBotPosition ok hero='..sHeroInternalName..' pos='..nRole )
+		return true
+	end )
+	return ok and bOk == true
+end
+
+-- Callers in other bot files read this VM global: requiring this file again
+-- would re-run its draft setup, so the same function is published here too.
+SetBotPosition = X.SetBotPosition
+
+return X

@@ -409,6 +409,119 @@ local function ChatDiag( sMsg )
 	end
 end
 
+-- [OHA-LLM] Chat tools: a model answer may carry tool calls that move a
+-- teammate bot's position. Each call is validated against the live roster and
+-- rate-limited before anything executes; every step stays pcall-guarded so an
+-- absent llm module leaves the old chat path untouched.
+local tToolRate = { executed = 0, lastAt = -999 }
+local ROLE_LANE_NAME = { [1] = 'safe', [2] = 'mid', [3] = 'off', [4] = 'roam', [5] = 'hard support' }
+
+local function GetToolHeroRoster()
+	local tBots = {}
+	local tHumans = {}
+	local okPlayers, tPlayers = pcall( function() return GetTeamPlayers( GetTeam() ) end )
+	if not okPlayers or type( tPlayers ) ~= 'table' then return tBots, tHumans end
+	for _, id in pairs( tPlayers ) do
+		local okHero, sHero = pcall( GetSelectedHeroName, id )
+		if okHero and type( sHero ) == 'string' and sHero ~= '' then
+			local bBot = false
+			pcall( function() bBot = IsPlayerBot( id ) == true end )
+			if bBot then
+				tBots[ #tBots + 1 ] = sHero
+			else
+				tHumans[ #tHumans + 1 ] = sHero
+			end
+		end
+	end
+	return tBots, tHumans
+end
+
+local function ShortHeroName( sHero )
+	return ( string.gsub( tostring( sHero ), 'npc_dota_hero_', '' ) )
+end
+
+-- Announce through every channel this VM may have: console, message feed
+-- (only when GameRules exists here) and team chat, which always works.
+local function AnnounceChatTool( sMsg )
+	pcall( print, sMsg )
+	pcall( function()
+		if GameRules ~= nil and GameRules.SendCustomMessage ~= nil then
+			GameRules:SendCustomMessage( sMsg, 0, 0 )
+		end
+	end )
+	pcall( bot.ActionImmediate_Chat, bot, sMsg, false )
+end
+
+-- ValidateToolCall expects the model shape {tool, args = {hero, lane, pos}};
+-- accept a flattened {tool, hero, lane, pos} as well so either envelope form
+-- validates instead of being rejected as missing-tool.
+local function AsToolCall( call )
+	if type( call ) ~= 'table' then return nil end
+	if type( call.args ) == 'table' then return call end
+	if type( call.tool ) ~= 'string' then return nil end
+	return { tool = call.tool, args = { hero = call.hero, lane = call.lane, pos = call.pos } }
+end
+
+local function ExecuteChatToolCalls( tCalls, tBotHeroes, tHumanHeroes )
+	local okTools, LLMTools = pcall( require, GetScriptDirectory()..'/FunLib/llm_tools_core' )
+	if not okTools or type( LLMTools ) ~= 'table'
+		or type( LLMTools.ValidateToolCall ) ~= 'function'
+		or type( LLMTools.CanExecuteTool ) ~= 'function'
+	then
+		ChatDiag( '[OHA-LLM] chat tools unavailable: '..tostring( LLMTools ) )
+		return
+	end
+
+	local fnSetPos = nil
+	if type( SetBotPosition ) == 'function' then
+		-- hero_selection publishes this in the same VM; re-requiring it would
+		-- re-run its draft setup, so the global is preferred.
+		fnSetPos = SetBotPosition
+	else
+		local okSel, HeroSel = pcall( require, GetScriptDirectory()..'/hero_selection' )
+		if okSel and type( HeroSel ) == 'table' and type( HeroSel.SetBotPosition ) == 'function' then
+			fnSetPos = HeroSel.SetBotPosition
+		end
+	end
+	if fnSetPos == nil then
+		ChatDiag( '[OHA-LLM] chat tools: SetBotPosition missing' )
+		return
+	end
+
+	local tOpts = { teamBotHeroes = tBotHeroes, humanHeroes = tHumanHeroes }
+	for _, rawCall in ipairs( tCalls ) do
+		local call = AsToolCall( rawCall )
+		if call == nil then
+			ChatDiag( '[OHA-LLM] chat tool skipped: malformed call' )
+		else
+			local okVal, tVal = pcall( LLMTools.ValidateToolCall, call, tOpts )
+			if not okVal or type( tVal ) ~= 'table' then
+				ChatDiag( '[OHA-LLM] chat tool validate failed: '..tostring( tVal ) )
+			elseif tVal.ok ~= true then
+				ChatDiag( '[OHA-LLM] chat tool rejected: '..tostring( tVal.reason ) )
+			else
+				local okGate, bAllowed = pcall( function() return LLMTools.CanExecuteTool( DotaTime(), tToolRate ) end )
+				if not okGate or bAllowed ~= true then
+					ChatDiag( '[OHA-LLM] chat tool rate-limited: '..ShortHeroName( tVal.hero )
+						..' pos='..tostring( tVal.pos ) )
+				else
+					local okSet, bSet = pcall( fnSetPos, tVal.hero, tVal.pos )
+					if okSet and bSet == true then
+						tToolRate.executed = tToolRate.executed + 1
+						tToolRate.lastAt = DotaTime()
+						AnnounceChatTool( '[OHA-LLM] '..ShortHeroName( tVal.hero )
+							..' -> '..tostring( tVal.pos )
+							..' ('..tostring( ROLE_LANE_NAME[ tVal.pos ] or 'pos' )..') (from chat)' )
+					else
+						ChatDiag( '[OHA-LLM] chat tool failed: '..ShortHeroName( tVal.hero )
+							..' pos='..tostring( tVal.pos )..' err='..tostring( bSet ) )
+					end
+				end
+			end
+		end
+	end
+end
+
 function X.SetTalkMessage()
 
 	-- Fork: install the chat callback for every bot from pre-game onward; the
@@ -461,27 +574,52 @@ function X.SetTalkMessage()
 				local okEn, bEn = pcall( LLMChat.ChatEnabled )
 				bLLMChatOn = okEn and bEn == true
 			end
-			if okCC and type( LLMChat ) == 'table' and LLMChat.MaybeReply then
-				local nID = bot:GetPlayerID()
-				local sSpeaker = 'player'
-				if nHumanID ~= nil then
-					local okN, sN = pcall( function() return PlayerResource:GetPlayerName( nHumanID ) end )
-					if okN and type( sN ) == 'string' and sN ~= '' then sSpeaker = sN end
-				end
-				local okQ, sStatus = pcall( LLMChat.MaybeReply, {
-					botName = string.gsub( bot:GetUnitName() or 'OHA', 'npc_dota_hero_', '' ),
-					hero = bot:GetUnitName() or '?',
-					team = GetTeam() == TEAM_RADIANT and 'Radiant' or 'Dire',
-					minute = math.floor( DotaTime() / 60 ),
-					kills = GetHeroKills( nID ),
-					deaths = GetHeroDeaths( nID ),
-					assists = GetHeroAssists( nID ),
-					netWorth = bot:GetNetWorth() or 0,
-					difficulty = tostring( bot:GetDifficulty() ),
-					speakerName = sSpeaker,
-					speakerHero = (nHumanID ~= nil and GetSelectedHeroName( nHumanID )) or '',
-					message = sHeard,
-				}, DotaTime(), function( sText, sVia, sReason )
+			local nID = bot:GetPlayerID()
+			local sSpeaker = 'player'
+			if nHumanID ~= nil then
+				local okN, sN = pcall( function() return PlayerResource:GetPlayerName( nHumanID ) end )
+				if okN and type( sN ) == 'string' and sN ~= '' then sSpeaker = sN end
+			end
+			local tBotHeroes, tHumanHeroes = GetToolHeroRoster()
+			local tCtx = {
+				botName = string.gsub( bot:GetUnitName() or 'OHA', 'npc_dota_hero_', '' ),
+				hero = bot:GetUnitName() or '?',
+				team = GetTeam() == TEAM_RADIANT and 'Radiant' or 'Dire',
+				minute = math.floor( DotaTime() / 60 ),
+				kills = GetHeroKills( nID ),
+				deaths = GetHeroDeaths( nID ),
+				assists = GetHeroAssists( nID ),
+				netWorth = bot:GetNetWorth() or 0,
+				difficulty = tostring( bot:GetDifficulty() ),
+				speakerName = sSpeaker,
+				speakerHero = (nHumanID ~= nil and GetSelectedHeroName( nHumanID )) or '',
+				message = sHeard,
+				teamBotHeroes = tBotHeroes,
+				humanHeroes = tHumanHeroes,
+			}
+			if okCC and type( LLMChat ) == 'table' and LLMChat.MaybeReplyEnvelope then
+				-- Envelope path: one model answer carries a reply plus tool calls.
+				local okQ, sStatus = pcall( LLMChat.MaybeReplyEnvelope, tCtx, DotaTime(), function( tRes )
+					local sText = nil
+					local tCalls = nil
+					if type( tRes ) == 'table' then
+						sText = tRes.reply
+						tCalls = tRes.toolCalls
+					end
+					if type( sText ) == 'string' and sText ~= '' then
+						pcall( bot.ActionImmediate_Chat, bot, sText, bHeardAllChat )
+						nReplyHumanCount = nReplyHumanCount + 1
+						nTalkDelay = RandomInt( 6, 30 )/10
+					end
+					if type( tCalls ) == 'table' then
+						ExecuteChatToolCalls( tCalls, tBotHeroes, tHumanHeroes )
+					elseif type( sText ) ~= 'string' or sText == '' then
+						ChatDiag( '[OHA-LLM] chat envelope: no reply, no tools' )
+					end
+				end )
+				if okQ and sStatus == 'asked' then bLLMAsked = true end
+			elseif okCC and type( LLMChat ) == 'table' and LLMChat.MaybeReply then
+				local okQ, sStatus = pcall( LLMChat.MaybeReply, tCtx, DotaTime(), function( sText, sVia, sReason )
 					if sText ~= nil and sText ~= '' then
 						pcall( bot.ActionImmediate_Chat, bot, sText, bHeardAllChat )
 						nReplyHumanCount = nReplyHumanCount + 1
