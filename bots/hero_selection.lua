@@ -1032,6 +1032,7 @@ local bLLMDraftLogged = false
 local function AutoStartFretBots()
 	if bFretBotsNoteLogged then return end
 	bFretBotsNoteLogged = true
+	if sForkBanner ~= nil then ForkLog( sForkBanner ) end
 	ForkLog('[OHA] FretBots: no difficulty vote after hero spawn? Run in console: sv_cheats 1; script_reload_code bots/fretbots')
 end
 
