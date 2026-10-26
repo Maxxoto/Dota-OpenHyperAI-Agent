@@ -22,7 +22,9 @@ local function Log(msg)
 	pcall(RealPrint, msg)
 	pcall(MsgN, msg)
 	pcall(function()
-		if GameRules ~= nil and GameRules.SendCustomMessage ~= nil then
+		if Utilities ~= nil and Utilities.Print ~= nil then
+			Utilities:Print(msg)
+		elseif GameRules ~= nil and GameRules.SendCustomMessage ~= nil then
 			GameRules:SendCustomMessage(msg, 0, 0)
 		end
 	end)

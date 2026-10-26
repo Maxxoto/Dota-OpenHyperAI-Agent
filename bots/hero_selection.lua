@@ -89,7 +89,11 @@ local function ForkLog(msg)
 		while #tForkLog > FORK_LOG_LINES do table.remove( tForkLog ) end
 	end )
 	pcall( function()
-		if GameRules ~= nil and GameRules.SendCustomMessage ~= nil then
+		-- Utilities:Print is FretBots' colored SendCustomMessage wrapper and is
+		-- the proven path when FretBots is loaded in this VM.
+		if Utilities ~= nil and Utilities.Print ~= nil then
+			Utilities:Print( msg )
+		elseif GameRules ~= nil and GameRules.SendCustomMessage ~= nil then
 			GameRules:SendCustomMessage( msg, 0, 0 )
 		end
 	end )
