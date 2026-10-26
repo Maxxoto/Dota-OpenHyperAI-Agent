@@ -397,6 +397,17 @@ local sHumanString = nil
 local nHumanID = nil
 local bAllChat = false
 local bAnnouncedLLMReady = false
+-- Diagnostics for the chat path: FretBots' Debug replaces global print with
+-- a no-op, so route through the fork logger with a plain-print fallback.
+local function ChatDiag( sMsg )
+	local okFL, FL = pcall( require, GetScriptDirectory()..'/FunLib/fork_log' )
+	if okFL and type( FL ) == 'table' and FL.ForkLog then
+		pcall( FL.ForkLog, sMsg )
+	else
+		pcall( print, sMsg )
+	end
+end
+
 function X.SetTalkMessage()
 
 	-- Fork: install the chat callback for every bot once the game is running;
@@ -437,6 +448,10 @@ function X.SetTalkMessage()
 			-- 'asked' = a call is in flight; the callback speaks or stays
 			-- silent, never the local fallback. 'skipped' = legacy local reply.
 			local bLLMAsked = false
+			-- sHumanString is cleared at the end of this block, while the ask is
+			-- async: the callback needs its own copy of the line it answers.
+			local sHeard = sHumanString
+			local bHeardAllChat = bAllChat
 			local okCC, LLMChat = pcall( require, GetScriptDirectory()..'/FunLib/llm_chat' )
 			if okCC and type( LLMChat ) == 'table' and LLMChat.MaybeReply then
 				local nID = bot:GetPlayerID()
@@ -457,32 +472,27 @@ function X.SetTalkMessage()
 					difficulty = tostring( bot:GetDifficulty() ),
 					speakerName = sSpeaker,
 					speakerHero = (nHumanID ~= nil and GetSelectedHeroName( nHumanID )) or '',
-					message = sHumanString,
+					message = sHeard,
 				}, DotaTime(), function( sText )
 					if sText ~= nil and sText ~= '' then
-						pcall( bot.ActionImmediate_Chat, bot, sText, bAllChat )
+						pcall( bot.ActionImmediate_Chat, bot, sText, bHeardAllChat )
 						nReplyHumanCount = nReplyHumanCount + 1
 						nTalkDelay = RandomInt( 6, 30 )/10
 						return
 					end
 					-- The model answered nothing: speak the local table reply so a human
 					-- message is never left unanswered just because an ask failed.
-					local sLocal = J.Chat.GetReplyString( sHumanString, bAllChat )
+					local sLocal = J.Chat.GetReplyString( sHeard, bHeardAllChat )
 					if sLocal ~= nil then
-						pcall( bot.ActionImmediate_Chat, bot, sLocal, bAllChat )
+						pcall( bot.ActionImmediate_Chat, bot, sLocal, bHeardAllChat )
 						nReplyHumanCount = nReplyHumanCount + 1
 						nTalkDelay = RandomInt( 6, 30 )/10
 						return
 					end
 					local sWhy = '[OHA-LLM] chat: no reply this time (model silent and Trash_Talk_Level='
 						..tostring( Customize.Trash_Talk_Level )..' denies '
-						..( bAllChat and 'all-chat' or 'team-chat' )..' local lines)'
-					local okFL, FL = pcall( require, GetScriptDirectory()..'/FunLib/fork_log' )
-					if okFL and type( FL ) == 'table' and FL.ForkLog then
-						pcall( FL.ForkLog, sWhy )
-					else
-						pcall( print, sWhy )
-					end
+						..( bHeardAllChat and 'all-chat' or 'team-chat' )..' local lines)'
+					ChatDiag( sWhy )
 				end )
 				if okQ and sStatus == 'asked' then bLLMAsked = true end
 			end
@@ -498,6 +508,11 @@ function X.SetTalkMessage()
 					nReplyHumanCount = nReplyHumanCount + 1
 					nTalkDelay = RandomInt( 6, 30 )/10
 					if nTalkDelay > 2.0 then nTalkDelay = RandomInt( 6, 30 )/10 end
+				else
+					ChatDiag( '[OHA-LLM] chat: local reply denied (Allow_Trash_Talk='
+						..tostring( Customize.Allow_Trash_Talk )..' level='
+						..tostring( Customize.Trash_Talk_Level )..' channel='
+						..( bAllChat and 'all' or 'team' )..')' )
 				end
 			end
 			sHumanString = nil
