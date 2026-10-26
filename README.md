@@ -29,7 +29,7 @@
 2. Create a **Custom Lobby** with **Local Host** server
 3. Start the game - bots auto-pick and play
 
-For **FretBots mode** (harder bots, neutral items, chatbot): [Manual installation guide](https://github.com/forest0xia/dota2bot-OpenHyperAI/discussions/68). This fork tries to start FretBots automatically when the engine loads its addon scripts (`game/gameinit.lua`). In a plain **bot-script / Local Dev Script lobby** the engine does not run `gameinit.lua`, so start it once per game from the console with cheats enabled: `sv_cheats 1; script_reload_code bots/fretbots` (you'll then get the difficulty vote). Auto-start opt-out: `Customize.Enable_FretBots_By_Default = false` in [Customize/general.lua](bots/Customize/general.lua).
+For **FretBots mode** (harder bots, neutral items, chatbot): [Manual installation guide](https://github.com/forest0xia/dota2bot-OpenHyperAI/discussions/68). This fork starts FretBots automatically at hero selection when `vscripts/game` is linked to the repo (the fork installers do this) - the difficulty vote appears in-game, no console command needed. If only `bots/` is linked (Workshop-style install), run it once per game from the console with cheats enabled: `sv_cheats 1; script_reload_code bots/fretbots`. Auto-start opt-out: `Customize.Enable_FretBots_By_Default = false` in [Customize/general.lua](bots/Customize/general.lua).
 
 ---
 

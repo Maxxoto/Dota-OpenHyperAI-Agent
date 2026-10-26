@@ -21,7 +21,7 @@ powershell -ExecutionPolicy Bypass -File quick-install-fork.ps1
 ./quick-install-fork.sh
 ```
 
-FretBots still needs once per game in a Local Dev Script lobby: `sv_cheats 1; script_reload_code bots/fretbots` (the engine does not run `game/gameinit.lua` there).
+FretBots starts automatically at hero selection once both links exist (verified working in a Local Dev Script lobby). The console command below is only a fallback for Workshop-style installs that link `bots/` alone: `sv_cheats 1; script_reload_code bots/fretbots`.
 
 ### Available Scripts
 
