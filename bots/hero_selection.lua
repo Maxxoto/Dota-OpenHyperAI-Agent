@@ -999,7 +999,7 @@ end
 local bFretBotsAutoStarted = false
 local nFretBotsAttempts = 0
 local nFretBotsNextTryAt = 0
-local bFretBotsFirstThinkLogged = false
+local nFretBotsLastState = nil
 local bLLMDraftLogged = false
 local FRETBOTS_MAX_ATTEMPTS = 6
 
@@ -1009,17 +1009,20 @@ local function AutoStartFretBots()
 		bFretBotsAutoStarted = true
 		return
 	end
-	-- Diagnostic: name the state the bots VM actually reports on the first
-	-- draft tick, so a blocked gate is visible in the console.
-	if not bFretBotsFirstThinkLogged then
-		bFretBotsFirstThinkLogged = true
-		ForkLog('[OHA] draft Think state='..tostring(GetGameState())
+	-- Log every game-state change the bots VM reports, so a blocked gate is
+	-- visible in the console instead of silent.
+	local nState = GetGameState()
+	if nState ~= nFretBotsLastState then
+		nFretBotsLastState = nState
+		ForkLog('[OHA] draft Think state='..tostring(nState)
 			..' heroSelection='..tostring(GAME_STATE_HERO_SELECTION)
 			..' gameTime='..tostring(GameTime()))
 	end
-	-- At most one load attempt per game-second; FretBots aborts itself when
-	-- loaded before hero selection, so early attempts are retried instead of
-	-- latching a cached abort.
+	-- FretBots aborts itself when loaded before hero selection, so only try
+	-- once the state is right; earlier ticks just wait.
+	if nState == nil or nState < GAME_STATE_HERO_SELECTION then return end
+	-- At most one load attempt per game-second; an aborted load is retried
+	-- instead of latching a cached abort.
 	if GameTime() < nFretBotsNextTryAt then return end
 	nFretBotsNextTryAt = GameTime() + 1
 	nFretBotsAttempts = nFretBotsAttempts + 1
