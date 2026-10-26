@@ -1014,7 +1014,7 @@ local bLLMDraftLogged = false
 local function AutoStartFretBots()
 	if bFretBotsNoteLogged then return end
 	bFretBotsNoteLogged = true
-	ForkLog('[OHA] FretBots auto-start runs in game/gameinit.lua (addon VM)')
+	ForkLog('[OHA] FretBots: no difficulty vote after hero spawn? Run in console: sv_cheats 1; script_reload_code bots/fretbots')
 end
 
 
