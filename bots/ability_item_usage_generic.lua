@@ -19,6 +19,22 @@ if GAMEMODE_ARDM == nil then GAMEMODE_ARDM = 20 end
 
 if BotBuild == nil then return end
 
+-- Fork: !llm must work regardless of the trash-talk gate in SetTalkMessage
+-- (that gate installs a chat callback only for the designated reply bot, under
+-- its reply quota, once the game is in progress). Same-VM dedupe inside
+-- HandleChatCommand keeps this to one reply across bot instances.
+local function LLMCommandCallback( tChat )
+	local sText = tChat.string
+	if type( sText ) ~= 'string' or not string.find( sText, '!llm' ) then return end
+	local sReply = LLM_Commands.HandleChatCommand( sText )
+	if sReply ~= nil then
+		pcall( bot.ActionImmediate_Chat, bot, sReply, not tChat.team_only )
+	end
+end
+if InstallChatCallback ~= nil then
+	pcall( InstallChatCallback, LLMCommandCallback )
+end
+
 local bDeafaultAbilityHero = BotBuild['bDeafaultAbility']
 local bDeafaultItemHero = BotBuild['bDeafaultItem']
 local sAbilityLevelUpList = BotBuild['sSkillList']
