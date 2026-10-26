@@ -998,6 +998,10 @@ end
 --==============================================================================
 local bFretBotsAutoStarted = false
 local nFretBotsAttempts = 0
+local nFretBotsNextTryAt = 0
+local bFretBotsFirstThinkLogged = false
+local bLLMDraftLogged = false
+local FRETBOTS_MAX_ATTEMPTS = 6
 
 local function AutoStartFretBots()
 	if bFretBotsAutoStarted then return end
@@ -1005,13 +1009,22 @@ local function AutoStartFretBots()
 		bFretBotsAutoStarted = true
 		return
 	end
-	-- Before hero selection FretBots aborts itself; loading then would poison
-	-- the require cache, so wait for the picking phase first.
-	if GetGameState() == nil or GetGameState() < GAME_STATE_HERO_SELECTION then return end
-
+	-- Diagnostic: name the state the bots VM actually reports on the first
+	-- draft tick, so a blocked gate is visible in the console.
+	if not bFretBotsFirstThinkLogged then
+		bFretBotsFirstThinkLogged = true
+		ForkLog('[OHA] draft Think state='..tostring(GetGameState())
+			..' heroSelection='..tostring(GAME_STATE_HERO_SELECTION)
+			..' gameTime='..tostring(GameTime()))
+	end
+	-- At most one load attempt per game-second; FretBots aborts itself when
+	-- loaded before hero selection, so early attempts are retried instead of
+	-- latching a cached abort.
+	if GameTime() < nFretBotsNextTryAt then return end
+	nFretBotsNextTryAt = GameTime() + 1
 	nFretBotsAttempts = nFretBotsAttempts + 1
 	local sKey = GetScriptDirectory()..'/FretBots'
-	if nFretBotsAttempts == 1 then ForkLog('[OHA] auto-starting FretBots mode') end
+	ForkLog('[OHA] FretBots load attempt '..nFretBotsAttempts..'/'..FRETBOTS_MAX_ATTEMPTS)
 	local okFret, errFret = pcall( require, sKey )
 	if okFret and Debug ~= nil then
 		bFretBotsAutoStarted = true
@@ -1024,8 +1037,8 @@ local function AutoStartFretBots()
 	if not okFret then
 		ForkLog('[OHA] FretBots auto-start failed: '..tostring(errFret)..' | fallback: sv_cheats 1; script_reload_code bots/fretbots')
 		bFretBotsAutoStarted = true
-	elseif nFretBotsAttempts >= 3 then
-		ForkLog('[OHA] FretBots did not initialize after 3 tries | fallback: sv_cheats 1; script_reload_code bots/fretbots')
+	elseif nFretBotsAttempts >= FRETBOTS_MAX_ATTEMPTS then
+		ForkLog('[OHA] FretBots did not initialize after '..FRETBOTS_MAX_ATTEMPTS..' tries | fallback: sv_cheats 1; script_reload_code bots/fretbots')
 		bFretBotsAutoStarted = true
 	end
 end
@@ -1069,6 +1082,12 @@ function Think()
 					llmCandidates[#llmCandidates + 1] = { hero = c.name, score = c.score }
 				end
 			end
+		end
+		if not bLLMDraftLogged then
+			bLLMDraftLogged = true
+			local okS, sSt = pcall( LLMAdapter.PickStatus )
+			ForkLog('[OHA-LLM] draft phase: enemies='..#llmEnemies..' candidates='..#llmCandidates
+				..' status='..tostring(okS and sSt or 'n/a'))
 		end
 		if LLMAdapter.DraftStep(llmEnemies, llmCandidates, sBanList, GameTime(), PickSchedule.initialized) == 'wait' then
 			return
