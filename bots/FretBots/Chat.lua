@@ -26,36 +26,13 @@ function Chat:SendMessageToBackend(inputText, playerInfo)
 end
 
 function Chat:SendHttpRequest(api, inputData, callback)
-    local jsonString = json.encode(inputData)
-
-    -- local request = CreateHTTPRequest("POST", "http://127.0.0.1:5000/"..api)
-    local request = CreateHTTPRequest("POST", "https://chatgpt-with-dota2bot.onrender.com/"..api)
-    request:SetHTTPRequestHeaderValue("Content-Type", "application/json")
-    request:SetHTTPRequestRawPostBody("application/json", jsonString)
-    request:SetHTTPRequestHeaderValue("Authorization", API_KEY)
-
-    request:Send(function(response)
-        local res = response.Body
-
-        if response.StatusCode == 200 then
-            local success, resJsonObj = pcall(function() return json.decode(res) end)
-            if success and resJsonObj and resJsonObj.error then
-                Chat:HandleFailMessage(tostring(resJsonObj.message), false)
-            else
-                if callback then callback(resJsonObj)
-                else
-                    Chat:HandleResponseMessage(jsonString, res)
-                end
-            end
-        else
-            local success, resJsonObj = pcall(function() return json.decode(res) end)
-            if success and resJsonObj and resJsonObj.error then
-                Chat:HandleFailMessage(tostring(resJsonObj.error), false)
-            else
-                Chat:HandleFailMessage(Localization.Get("fret_req_error_msg"), false)
-            end
-        end
-    end)
+    -- Fork change (W): the third-party chatgpt-with-dota2bot.onrender.com
+    -- backend is removed. Bot chat replies now run through the local Groq
+    -- gateway (FunLib/llm_chat, Phases.chat in game/Customize/llm.lua) wired
+    -- into ability_item_usage_generic's reply hook. 'start'/'end' telemetry
+    -- pings are intentionally dropped: nothing leaves the machine except
+    -- Groq calls the user configured.
+    if callback then callback(nil) end
 end
 
 function Chat.StartCallback(resJsonObj)

@@ -9,7 +9,7 @@ local function DefaultConfig()
         TimeoutMs = 8000,
         MaxConcurrent = 1,
         MaxCalls = {policy = 12, chat = 30},
-        Phases = {draft = true, builds = true, desire = false, chat = false}
+        Phases = {draft = true, builds = true, desire = false, chat = true}
     }
 end
 local function AsBool(value, fallback)

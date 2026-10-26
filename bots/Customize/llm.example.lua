@@ -39,6 +39,6 @@ return {
         draft = true,   -- counter-picks/bans during hero selection
         builds = true,  -- adaptive item/skill builds
         desire = false, -- (Phase 2, not yet implemented) macro strategy bias
-        chat = false,   -- (Workstream W) natural chat
+        chat = true,    -- human-like trash talk via Groq persona
     },
 }

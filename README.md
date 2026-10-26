@@ -138,7 +138,13 @@ At hero spawn the same directive supplies a skill order (`q`/`w`/`e`/`r`), talen
     - For an install that survives updates: copy `bots/Customize/general.lua` to `<vscripts>/game/Customize/general.lua` and flip the flag there. The loader **replaces** the whole `Customize` table with `game/Customize/general.lua` when that file exists, so it has to be the full copy, not a one-line file. A one-liner wipes every other setting.
 4. **Start a Custom Lobby** on a **Local Host** server. Open the console (`~`) and watch for `[OHA-LLM]` lines during hero selection and at hero spawn.
 
-Other knobs in `llm.lua`: `Endpoint`, `Model`, `TimeoutMs` (8000), `MaxCalls` (12 policy / 30 chat), and `Phases` (draft and builds on; desire and chat reserved for later work).
+Other knobs in `llm.lua`: `Endpoint`, `Model`, `TimeoutMs` (8000), `MaxCalls` (12 policy / 30 chat), and `Phases` (draft, builds, and chat on; desire reserved for later work).
+
+### Human-Like Bot Chat (Trash Talk)
+
+With `Phases.chat = true`, bots reply to your chat through Groq with a human-player persona: cocky, playful BM, Dota slang, same language you typed in, and never an admission of being an AI (rule-breaking replies are rejected by a sanitizer - one line, no links, 140-char cap). Replies are rate-limited (25s cooldown, ~60% chance, 12 per game on top of the 30-call chat budget) and fall back to the original local-table replies when the layer is off, slow, or malformed (G5).
+
+This **replaces** upstream's third-party ChatGPT backend (`chatgpt-with-dota2bot.onrender.com`): that service is removed from this fork - no game data leaves your machine except the Groq calls you configured.
 
 ---
 

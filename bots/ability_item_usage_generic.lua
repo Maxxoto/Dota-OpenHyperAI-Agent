@@ -389,6 +389,7 @@ local nMaxReplyCount = RandomInt( 5, 9 )
 local bInstallChatCallbackDone = false
 local nReplyHumanTime = nil
 local sHumanString = nil
+local nHumanID = nil
 local bAllChat = false
 function X.SetTalkMessage()
 
@@ -420,17 +421,53 @@ function X.SetTalkMessage()
 			and nReplyHumanTime ~= nil
 			and DotaTime() > nReplyHumanTime + nTalkDelay
 		then
-			local chatString = J.Chat.GetReplyString( sHumanString, bAllChat )
-			if chatString ~= nil
-			then
-				if nReplyHumanCount == nMaxReplyCount
-				then chatString = J.Chat.GetStopReplyString() end
+			-- LLM chat (W): Groq persona reply with human-like trash talk.
+			-- 'asked' = a call is in flight; the callback speaks or stays
+			-- silent, never the local fallback. 'skipped' = legacy local reply.
+			local bLLMAsked = false
+			local okCC, LLMChat = pcall( require, GetScriptDirectory()..'/FunLib/llm_chat' )
+			if okCC and type( LLMChat ) == 'table' and LLMChat.MaybeReply then
+				local nID = bot:GetPlayerID()
+				local sSpeaker = 'player'
+				if nHumanID ~= nil then
+					local okN, sN = pcall( function() return PlayerResource:GetPlayerName( nHumanID ) end )
+					if okN and type( sN ) == 'string' and sN ~= '' then sSpeaker = sN end
+				end
+				local okQ, sStatus = pcall( LLMChat.MaybeReply, {
+					botName = string.gsub( bot:GetUnitName() or 'OHA', 'npc_dota_hero_', '' ),
+					hero = bot:GetUnitName() or '?',
+					team = GetTeam() == TEAM_RADIANT and 'Radiant' or 'Dire',
+					minute = math.floor( DotaTime() / 60 ),
+					kills = GetHeroKills( nID ),
+					deaths = GetHeroDeaths( nID ),
+					assists = GetHeroAssists( nID ),
+					netWorth = bot:GetNetWorth() or 0,
+					difficulty = tostring( bot:GetDifficulty() ),
+					speakerName = sSpeaker,
+					speakerHero = (nHumanID ~= nil and GetSelectedHeroName( nHumanID )) or '',
+					message = sHumanString,
+				}, DotaTime(), function( sText )
+					if sText ~= nil and sText ~= '' then
+						pcall( bot.ActionImmediate_Chat, bot, sText, bAllChat )
+						nReplyHumanCount = nReplyHumanCount + 1
+						nTalkDelay = RandomInt( 6, 30 )/10
+					end
+				end )
+				if okQ and sStatus == 'asked' then bLLMAsked = true end
+			end
+			if not bLLMAsked then
+				local chatString = J.Chat.GetReplyString( sHumanString, bAllChat )
+				if chatString ~= nil
+				then
+					if nReplyHumanCount == nMaxReplyCount
+					then chatString = J.Chat.GetStopReplyString() end
 
-				bot:ActionImmediate_Chat( chatString, bAllChat )
+					bot:ActionImmediate_Chat( chatString, bAllChat )
 
-				nReplyHumanCount = nReplyHumanCount + 1
-				nTalkDelay = RandomInt( 6, 30 )/10
-				if nTalkDelay > 2.0 then nTalkDelay = RandomInt( 6, 30 )/10 end
+					nReplyHumanCount = nReplyHumanCount + 1
+					nTalkDelay = RandomInt( 6, 30 )/10
+					if nTalkDelay > 2.0 then nTalkDelay = RandomInt( 6, 30 )/10 end
+				end
 			end
 			sHumanString = nil
 			nReplyHumanTime = nil
@@ -542,6 +579,7 @@ function X.SetReplyHumanTime( tChat )
 		and ( tChat.team_only or J.Role.IsEnemyMemberID( nChatID ) )
 	then
 		sHumanString = sChatString
+		nHumanID = nChatID
 		nReplyHumanTime = DotaTime()
 		bAllChat = not tChat.team_only
 	end

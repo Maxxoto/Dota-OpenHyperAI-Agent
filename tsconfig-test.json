@@ -19,6 +19,7 @@
         "typescript/bots/FunLib/llm_config.ts",
         "typescript/bots/FunLib/llm_state_core.ts",
         "typescript/bots/FunLib/llm_directive_core.ts",
+        "typescript/bots/FunLib/llm_chat_core.ts",
         "test/**/*.ts"
     ]
 }
