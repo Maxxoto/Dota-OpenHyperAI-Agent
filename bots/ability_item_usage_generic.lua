@@ -569,7 +569,11 @@ function X.SetReplyHumanTime( tChat )
 	end
 
 	if string.find(sChatString, "!llm") then
-		local sLLMReply = LLM_Commands.HandleChatCommand( sChatString )
+		local okCmd, sLLMReply = pcall( LLM_Commands.HandleChatCommand, sChatString )
+		if not okCmd then
+			pcall( bot.ActionImmediate_Chat, bot, '[OHA-LLM] command error: '..tostring( sLLMReply ), not tChat.team_only )
+			return
+		end
 		if sLLMReply then
 			print( sLLMReply )
 			pcall( bot.ActionImmediate_Chat, bot, sLLMReply, not tChat.team_only )

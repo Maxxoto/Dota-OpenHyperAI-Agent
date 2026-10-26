@@ -1144,7 +1144,11 @@ function SelectHeroChatCallback(PlayerID, ChatText, bTeamOnly)
 	if startsWithExclamation(text) then
 		-- !llm is handled here too: ability_item_usage_generic (the usual site)
 		-- only loads at bot spawn, so its chat callback is absent during draft.
-		local sLLMReply = LLM_Commands.HandleChatCommand( text )
+		local okCmd, sLLMReply = pcall( LLM_Commands.HandleChatCommand, text )
+		if not okCmd then
+			LLMBroadcast( '[OHA-LLM] command error: '..tostring( sLLMReply ) )
+			return
+		end
 		if sLLMReply ~= nil then
 			LLMBroadcast( sLLMReply )
 			return
