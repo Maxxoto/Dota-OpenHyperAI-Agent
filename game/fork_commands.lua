@@ -37,7 +37,17 @@ end
 local function ConfigSummary()
 	local cfg, where = LoadConfig()
 	if cfg == nil then
-		return where
+		where = "defaults (no Customize/llm.lua)"
+	end
+	local okLoader, loader = pcall(require, "bots/FunLib/llm_config")
+	if okLoader and type(loader) == "table" and type(loader.GetLlmConfig) == "function" then
+		local okEffective, effective = pcall(loader.GetLlmConfig)
+		if okEffective and type(effective) == "table" then
+			cfg = effective
+		end
+	end
+	if cfg == nil then
+		return "config unavailable"
 	end
 	local key = cfg.APIKey
 	local keyState
@@ -47,7 +57,7 @@ local function ConfigSummary()
 		keyState = "key=MISSING"
 	end
 	local phases = cfg.Phases or {}
-	return where .. " Enable=" .. tostring(cfg.Enable ~= false)
+	return (where or "defaults") .. " Enable=" .. tostring(cfg.Enable ~= false)
 		.. " " .. keyState
 		.. " model=" .. tostring(cfg.Model)
 		.. " draft=" .. tostring(phases.draft ~= false)
