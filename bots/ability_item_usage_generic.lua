@@ -525,6 +525,10 @@ function X.SetTalkMessage()
 					end
 				else
 					ChatDiag( '[OHA-LLM] chat: llm enabled but no ask this tick (cooldown or in flight)' )
+					if not bChatOfflineAnnounced then
+						bChatOfflineAnnounced = true
+						pcall( bot.ActionImmediate_Chat, bot, '[OHA-LLM] chat skipped (cooldown or in flight)', bAllChat )
+					end
 				end
 			end
 			sHumanString = nil
