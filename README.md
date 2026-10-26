@@ -80,7 +80,7 @@ One caveat before you link: `vscripts/game` is a stock Valve folder and this for
 
 **3. Turn on the LLM advisor** with the [setup steps below](#setup).
 
-The scripts in [bots/Install-to-vscript](bots/Install-to-vscript) won't do this for you. They link the Workshop item at `steamapps/workshop/content/570/3246316298`, not a fork checkout. Fork users link by hand as above, or edit those scripts to point at their clone.
+**Quick way (Windows):** run `bots\Install-to-vscript\quick-install-oha.bat` from your clone, as Administrator. It auto-detects your Steam install (registry), links `bots/` (junction fallback if symlinks are blocked), copies `Customize` to the permanent game tier, and can enable the LLM advisor for you: it asks for your Groq key and writes it into `<vscripts>/game/Customize/llm.lua` plus flips `Allow_LLM_Advisor = true` in the game-tier copy — the key never lands in the repo. The Linux/macOS scripts in that folder still target the Workshop copy; use the manual links below there.
 
 ---
 
@@ -119,6 +119,15 @@ At hero spawn the same directive supplies a skill order (`q`/`w`/`e`/`r`), talen
 | `!llm selftest`        | Run the offline validator self-test (canned responses, no network) and print pass/fail |
 
 `!llm on` can't override the master switch in `general.lua`. It only undoes an `!llm off` from the same game.
+
+### Verifying It Runs
+
+-   At hero-selection load the console prints `[OHA-LLM] FORK ACTIVE - modified OHA script running (...)` (once per team VM). **No banner = the lobby is not running this fork** — stale clone or Workshop copy. `git pull`, then start a fresh lobby.
+-   If the banner says `master gate OFF`, fix the two flags it names (`game/Customize/general.lua` and `game/Customize/llm.lua`).
+-   With the gate on, watch for `[OHA-LLM]` ask/accept lines during hero selection — the draft asks only run there.
+-   `!llm` commands answer in the **console** (not chat) and only **after the horn**: one bot per team installs the chat hook once the game is in progress. Team chat when you have bot teammates; all-chat (`Shift+Enter`) when playing solo against the bots. During the draft, `!llm` silence is normal — `!pick`/`!ban` work there through a different hook.
+-   Any `!llm <anything>` input prints at least a usage line — so total silence while `!sp` works means an old copy without the LLM branch.
+-   Hot reload after a `git pull`: `sv_cheats 1` then `dota_bot_reload_scripts` re-reads the Lua mid-game. Bot purchase/mode state resets, and draft asks don't re-run — use it for quick "is new code alive" checks only.
 
 ### Setup
 
