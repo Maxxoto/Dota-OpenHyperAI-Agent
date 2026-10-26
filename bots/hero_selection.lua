@@ -65,11 +65,18 @@ local okBanner, sBannerErr = pcall( function()
 end )
 if not okBanner then print( '[OHA-LLM] banner failed: ' .. tostring( sBannerErr ) ) end
 
+-- FretBots/Debug.lua mutes global print after loading, so fork logging goes
+-- through both print and MsgN (the raw console logger that survives it).
+local function ForkLog(msg)
+	pcall( print, msg )
+	pcall( MsgN, msg )
+end
+
 -- Best-effort pick-phase broadcast: message feed (GameRules), any available
 -- team member chat (pre-spawn the handle may be invalid - pcall makes that
 -- harmless), and console. Every channel is optional; failures never break picking.
 local function LLMBroadcast( sMsg )
-	print( sMsg )
+	ForkLog( sMsg )
 	pcall( function()
 		if GameRules ~= nil and GameRules.SendCustomMessage ~= nil then
 			GameRules:SendCustomMessage( sMsg, 0, 0 )
@@ -991,13 +998,6 @@ end
 --==============================================================================
 local bFretBotsAutoStarted = false
 local nFretBotsAttempts = 0
-
--- FretBots/Debug.lua mutes global print after loading, so log through both
--- print and MsgN (the raw console logger that survives the override).
-local function ForkLog(msg)
-	pcall( print, msg )
-	pcall( MsgN, msg )
-end
 
 local function AutoStartFretBots()
 	if bFretBotsAutoStarted then return end

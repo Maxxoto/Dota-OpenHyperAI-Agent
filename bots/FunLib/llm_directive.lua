@@ -75,6 +75,8 @@ local GatherDraft = ____llm_state.GatherDraft
 local ____llm_state_core = require(GetScriptDirectory().."/FunLib/llm_state_core")
 local DraftPrompt = ____llm_state_core.DraftPrompt
 local STATE_BUDGET_BYTES = ____llm_state_core.STATE_BUDGET_BYTES
+local ____fork_log = require(GetScriptDirectory().."/FunLib/fork_log")
+local ForkLog = ____fork_log.ForkLog
 local ____heroes = require(GetScriptDirectory().."/ts_libs/dota/heroes")
 local HeroName = ____heroes.HeroName
 local jsonlib = require(GetScriptDirectory().."/ts_libs/utils/json")
@@ -186,7 +188,7 @@ function ____exports.AskDraftDirective(facts, memoryNotes, onDone)
         60,
         function(ok, text, via, reason)
             if not ok then
-                print((("[OHA-LLM] draft fallback via=" .. via) .. " reason=") .. (reason ~= nil and reason or "n/a"))
+                ForkLog((("[OHA-LLM] draft fallback via=" .. via) .. " reason=") .. (reason ~= nil and reason or "n/a"))
                 onDone(nil)
                 return
             end
@@ -198,13 +200,13 @@ function ____exports.AskDraftDirective(facts, memoryNotes, onDone)
                 }
             )
             if not outcome.ok then
-                print("[OHA-LLM] directive discarded: " .. outcome.error)
+                ForkLog("[OHA-LLM] directive discarded: " .. outcome.error)
                 onDone(nil)
                 return
             end
             cached = outcome.directive
             cachedAt = GameTime()
-            print(((((("[OHA-LLM] directive accepted: " .. tostring(#outcome.directive.picks)) .. " picks, ") .. tostring(#outcome.directive.bans)) .. " bans, ") .. tostring(#outcome.directive.warnings)) .. " warnings")
+            ForkLog(((((("[OHA-LLM] directive accepted: " .. tostring(#outcome.directive.picks)) .. " picks, ") .. tostring(#outcome.directive.bans)) .. " bans, ") .. tostring(#outcome.directive.warnings)) .. " warnings")
             onDone(outcome.directive)
         end
     )
@@ -248,22 +250,22 @@ function ____exports.RunSelftest()
         )
         if out.ok == c.expectValid then
             passed = passed + 1
-            print("[OHA-LLM][selftest] ok: " .. c.name)
+            ForkLog("[OHA-LLM][selftest] ok: " .. c.name)
         else
             failed = failed + 1
             local why = out.ok and "unexpectedly valid" or out.error
-            print(((("[OHA-LLM][selftest] FAIL: " .. c.name) .. " (") .. why) .. ")")
+            ForkLog(((("[OHA-LLM][selftest] FAIL: " .. c.name) .. " (") .. why) .. ")")
         end
     end
     if heroes.npc_dota_hero_axe == true then
         passed = passed + 1
-        print("[OHA-LLM][selftest] ok: enum whitelist contains axe")
+        ForkLog("[OHA-LLM][selftest] ok: enum whitelist contains axe")
     else
         failed = failed + 1
-        print("[OHA-LLM][selftest] FAIL: enum whitelist missing axe")
+        ForkLog("[OHA-LLM][selftest] FAIL: enum whitelist missing axe")
     end
     local summary = ((("[OHA-LLM][selftest] " .. tostring(passed)) .. " passed, ") .. tostring(failed)) .. " failed"
-    print(summary)
+    ForkLog(summary)
     return summary
 end
 --- Chat command entry: returns a reply line, or undefined when not a !llm command.

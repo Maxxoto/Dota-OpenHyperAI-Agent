@@ -23,6 +23,7 @@ import {
 } from "./llm_directive_core";
 import { GatherDraft, type DraftFacts } from "./llm_state";
 import { DraftPrompt, STATE_BUDGET_BYTES } from "./llm_state_core";
+import { ForkLog } from "./fork_log";
 import { HeroName } from "bots/ts_libs/dota/heroes";
 
 const jsonlib = require("bots/ts_libs/utils/json");
@@ -160,7 +161,7 @@ export function AskDraftDirective(
 	const prompt = DraftPrompt(ctx, memoryNotes, jsonlib.encode, STATE_BUDGET_BYTES);
 	GatewayAsk("draft", prompt.system, prompt.user, 60, (ok, text, via, reason) => {
 		if (!ok) {
-			print("[OHA-LLM] draft fallback via=" + via + " reason=" + (reason !== undefined ? reason : "n/a"));
+			ForkLog("[OHA-LLM] draft fallback via=" + via + " reason=" + (reason !== undefined ? reason : "n/a"));
 			onDone(undefined);
 			return;
 		}
@@ -169,13 +170,13 @@ export function AskDraftDirective(
 			heroes: Heroes(),
 		});
 		if (!outcome.ok) {
-			print("[OHA-LLM] directive discarded: " + outcome.error);
+			ForkLog("[OHA-LLM] directive discarded: " + outcome.error);
 			onDone(undefined);
 			return;
 		}
 		cached = outcome.directive;
 		cachedAt = GameTime();
-		print(
+		ForkLog(
 			"[OHA-LLM] directive accepted: "
 			+ outcome.directive.picks.length + " picks, "
 			+ outcome.directive.bans.length + " bans, "
@@ -251,22 +252,22 @@ export function RunSelftest(): string {
 		});
 		if (out.ok === c.expectValid) {
 			passed += 1;
-			print("[OHA-LLM][selftest] ok: " + c.name);
+			ForkLog("[OHA-LLM][selftest] ok: " + c.name);
 		} else {
 			failed += 1;
 			const why = out.ok ? "unexpectedly valid" : out.error;
-			print("[OHA-LLM][selftest] FAIL: " + c.name + " (" + why + ")");
+			ForkLog("[OHA-LLM][selftest] FAIL: " + c.name + " (" + why + ")");
 		}
 	}
 	if (heroes["npc_dota_hero_axe"] === true) {
 		passed += 1;
-		print("[OHA-LLM][selftest] ok: enum whitelist contains axe");
+		ForkLog("[OHA-LLM][selftest] ok: enum whitelist contains axe");
 	} else {
 		failed += 1;
-		print("[OHA-LLM][selftest] FAIL: enum whitelist missing axe");
+		ForkLog("[OHA-LLM][selftest] FAIL: enum whitelist missing axe");
 	}
 	const summary = "[OHA-LLM][selftest] " + passed + " passed, " + failed + " failed";
-	print(summary);
+	ForkLog(summary);
 	return summary;
 }
 

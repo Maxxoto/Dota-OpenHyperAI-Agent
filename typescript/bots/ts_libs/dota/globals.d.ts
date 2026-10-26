@@ -6,120 +6,121 @@ import { Unit, Vector, AvoidanceZone } from "./interfaces";
 import { Lane, Team, UnitType } from ".";
 
 declare global {
-    function print(...args: any[]): void;
-    function pcall(func: any, path?: string): LuaMultiReturn<[boolean, any]>;
+	function print(...args: any[]): void;
+	function pcall(func: any, path?: string): LuaMultiReturn<[boolean, any]>;
 
-    function GetBot(): Unit;
+	function GetBot(): Unit;
 
-    function GetOpposingTeam(): Team;
+	function GetOpposingTeam(): Team;
 
-    function GetTeam(): Team;
+	function GetTeam(): Team;
 
-    function IsHeroAlive(nPlayerID: number): boolean;
+	function IsHeroAlive(nPlayerID: number): boolean;
 
-    function GetTeamPlayers(team: Team): number[];
-    function GetTeamPlayers(team: Team, bypass: boolean): number[];
+	function GetTeamPlayers(team: Team): number[];
+	function GetTeamPlayers(team: Team, bypass: boolean): number[];
 
-    function GetAvoidanceZones(): AvoidanceZone[];
+	function GetAvoidanceZones(): AvoidanceZone[];
 
-    function GetTeamMember(playerNumberOnTeam: number): Unit | null;
+	function GetTeamMember(playerNumberOnTeam: number): Unit | null;
 
-    function GetUnitList(unitType: UnitType): Unit[];
+	function GetUnitList(unitType: UnitType): Unit[];
 
-    function GameTime(): number;
+	function GameTime(): number;
 
-    function IsLocationPassable(loc: Vector): boolean;
+	function IsLocationPassable(loc: Vector): boolean;
 
-    function IsPlayerBot(playerId: number): boolean;
+	function IsPlayerBot(playerId: number): boolean;
 
-    function RandomInt(a: number, b: number): number;
+	function RandomInt(a: number, b: number): number;
 
-    function GetScriptDirectory(): string;
+	function GetScriptDirectory(): string;
 
-    function Vector(x: number, y: number, z: number): Vector;
+	function Vector(x: number, y: number, z: number): Vector;
 
-    function DotaTime(): number;
+	function DotaTime(): number;
 
-    function GetItemCost(itemName: string): number;
+	function GetItemCost(itemName: string): number;
 
-    function IsTeamPlayer(nPlayerID: number): boolean;
+	function IsTeamPlayer(nPlayerID: number): boolean;
 
-    function GetIncomingTeleports(): IncomingTeleport[];
+	function GetIncomingTeleports(): IncomingTeleport[];
 
-    function GetHeroLastSeenInfo(nPlayerID: number): LastSeenInfo[];
+	function GetHeroLastSeenInfo(nPlayerID: number): LastSeenInfo[];
 
-    function DebugDrawCircle(vCenter: Vector, fRadius: number, nRed: number, nGreen: number, nBlue: number): void;
+	function DebugDrawCircle(vCenter: Vector, fRadius: number, nRed: number, nGreen: number, nBlue: number): void;
 
-    function GetSelectedHeroName(nPlayerID: number): string;
+	function GetSelectedHeroName(nPlayerID: number): string;
 
-    function GetHeroLevel(playerId: number): number;
-    function GetTower(team: Team, tower: number): Unit | null;
-    function GetBarracks(team: Team, barracks: number): Unit | null;
-    function GetUnitToUnitDistance(unit1: Unit, unit2: Unit): number;
-    function GetUnitToLocationDistance(unit: Unit, location: Vector): number;
-    function GetAncient(team: Team): Unit;
-    function GetHeroKills(playerId: number): number;
-    function GetHeroDeaths(playerId: number): number;
-    function GetNeutralSpawners(): any;
-    function GetLaneFrontLocation(team: Team, lane: Lane, deltaFromFront: number): Vector;
-    function RandomVector(length: number): Vector;
-    function Clamp(value: number, min: number, max: number): number;
-    function RemapValClamped(value: number, fromMin: number, fromMax: number, toMin: number, toMax: number): number;
-    function GetDefendLaneDesire(lane: Lane): number;
-    function GetPushLaneDesire(lane: Lane): number;
-    function GetUnitToLocationDistance(unit: any, location: Vector): number;
+	function GetHeroLevel(playerId: number): number;
+	function GetTower(team: Team, tower: number): Unit | null;
+	function GetBarracks(team: Team, barracks: number): Unit | null;
+	function GetUnitToUnitDistance(unit1: Unit, unit2: Unit): number;
+	function GetUnitToLocationDistance(unit: Unit, location: Vector): number;
+	function GetAncient(team: Team): Unit;
+	function GetHeroKills(playerId: number): number;
+	function GetHeroDeaths(playerId: number): number;
+	function GetNeutralSpawners(): any;
+	function GetLaneFrontLocation(team: Team, lane: Lane, deltaFromFront: number): Vector;
+	function RandomVector(length: number): Vector;
+	function Clamp(value: number, min: number, max: number): number;
+	function RemapValClamped(value: number, fromMin: number, fromMax: number, toMin: number, toMax: number): number;
+	function GetDefendLaneDesire(lane: Lane): number;
+	function GetPushLaneDesire(lane: Lane): number;
+	function GetUnitToLocationDistance(unit: any, location: Vector): number;
 
-    function RandomFloat(min: number, max: number): number;
+	function RandomFloat(min: number, max: number): number;
 
-    interface HTTPRequest {
-        SetHTTPRequestRawPostBody(contentType: string, body: string): void;
-        SetHTTPRequestGetOrPostParameter(aString: string, bString: string): boolean;
-        SetHTTPRequestHeaderValue(key: string, value: string): void;
-        Send(callback: (result: any) => void): void;
-    }
+	interface HTTPRequest {
+		SetHTTPRequestRawPostBody(contentType: string, body: string): void;
+		SetHTTPRequestGetOrPostParameter(aString: string, bString: string): boolean;
+		SetHTTPRequestHeaderValue(key: string, value: string): void;
+		Send(callback: (result: any) => void): void;
+	}
 
-    interface LastSeenInfo {
-        location: Vector;
-        time_since_seen: number;
-    }
+	interface LastSeenInfo {
+		location: Vector;
+		time_since_seen: number;
+	}
 
-    interface IncomingTeleport {
-        playerid: number; // 回城卷轴使用者的玩家ID
-        location: Vector; // 回城卷轴的使用位置
-        time_remaining: number; // 回城卷轴离传送完毕的剩余时间
-    }
+	interface IncomingTeleport {
+		playerid: number; // 回城卷轴使用者的玩家ID
+		location: Vector; // 回城卷轴的使用位置
+		time_remaining: number; // 回城卷轴离传送完毕的剩余时间
+	}
 
-    function CreateRemoteHTTPRequest(url: string): HTTPRequest;
-    function CreateHTTPRequest(method: string, url: string): HTTPRequest;
-    function IsCMPickedHero(team: Team, heroName: string): boolean;
-    function IsCMBannedHero(heroName: string): boolean;
-    function GetCMPhaseTimeRemaining(): number;
-    function SelectHero(playerId: number, heroName: string): void;
-    function GetHeroPickState(): number;
-    function GetHeroPickState(): number;
-    function PickCaptain(): void;
-    function BansHero(): void;
-    function PicksHero(): void;
-    function CMPickHero(heroName: string): void;
-    function GetCMCaptain(): number;
-    function CMBanHero(heroName: string): void;
-    function SetCMCaptain(playerId: number): void;
-    function IsPlayerInHeroSelectionControl(playerId: number): boolean;
-    function GetGameState(): number;
-    function GetGameMode(): number;
-    interface PlayerResourceType {
-        GetPlayerCount(): number;
-        IsValidPlayerID(playerId: number): boolean;
-        GetConnectionState(playerId: number): number;
-        GetTeam(playerId: number): number;
-        GetSelectedHeroName(playerId: number): string;
-        GetNetWorth(playerId: number): number;
-        GetLevel(playerId: number): number;
-        GetKills(playerId: number): number;
-        GetDeaths(playerId: number): number;
-        GetAssists(playerId: number): number;
-    }
-    const PlayerResource: PlayerResourceType;
+	function CreateRemoteHTTPRequest(url: string): HTTPRequest;
+	function CreateHTTPRequest(method: string, url: string): HTTPRequest;
+	function IsCMPickedHero(team: Team, heroName: string): boolean;
+	function IsCMBannedHero(heroName: string): boolean;
+	function GetCMPhaseTimeRemaining(): number;
+	function SelectHero(playerId: number, heroName: string): void;
+	function GetHeroPickState(): number;
+	function GetHeroPickState(): number;
+	function PickCaptain(): void;
+	function BansHero(): void;
+	function PicksHero(): void;
+	function CMPickHero(heroName: string): void;
+	function GetCMCaptain(): number;
+	function CMBanHero(heroName: string): void;
+	function SetCMCaptain(playerId: number): void;
+	function IsPlayerInHeroSelectionControl(playerId: number): boolean;
+	function GetGameState(): number;
+	function GetGameMode(): number;
+	function MsgN(message: string): void;
+	interface PlayerResourceType {
+		GetPlayerCount(): number;
+		IsValidPlayerID(playerId: number): boolean;
+		GetConnectionState(playerId: number): number;
+		GetTeam(playerId: number): number;
+		GetSelectedHeroName(playerId: number): string;
+		GetNetWorth(playerId: number): number;
+		GetLevel(playerId: number): number;
+		GetKills(playerId: number): number;
+		GetDeaths(playerId: number): number;
+		GetAssists(playerId: number): number;
+	}
+	const PlayerResource: PlayerResourceType;
 }
 
-export {};
+export { };

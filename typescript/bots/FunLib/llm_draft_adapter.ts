@@ -14,6 +14,7 @@
  */
 import { AskDraftDirective, CachedDraftDirective, DraftAskEnabled } from "./llm_directive";
 import { MergeDraftScore } from "./llm_directive_core";
+import { ForkLog } from "./fork_log";
 import type { DraftCandidate } from "./llm_state_core";
 
 const MAX_DRAFT_ASKS = 2;
@@ -159,7 +160,7 @@ function AskOnce(
 	}
 	const trimmed =
 		candidates.length > MAX_CANDIDATES ? candidates.slice(0, MAX_CANDIDATES) : candidates;
-	print("[OHA-LLM] draft ask #" + s.askedCount + " (" + trimmed.length + " candidates)");
+	ForkLog("[OHA-LLM] draft ask #" + s.askedCount + " (" + trimmed.length + " candidates)");
 	pickEvents.push(
 		"[OHA-LLM] draft ask #" + s.askedCount + "/" + MAX_DRAFT_ASKS
 		+ " sent (" + trimmed.length + " candidates)"
@@ -173,7 +174,7 @@ function AskOnce(
 				ev += " | bans " + directive.bans.map((b) => ShortHero(b.hero)).join(",");
 			}
 			pickEvents.push(ev);
-			print(
+			ForkLog(
 				"[OHA-LLM] draft directive active: "
 				+ directive.picks.length + " picks, "
 				+ directive.bans.length + " bans"

@@ -80,6 +80,8 @@ local CachedDraftDirective = ____llm_directive.CachedDraftDirective
 local DraftAskEnabled = ____llm_directive.DraftAskEnabled
 local ____llm_directive_core = require(GetScriptDirectory().."/FunLib/llm_directive_core")
 local MergeDraftScore = ____llm_directive_core.MergeDraftScore
+local ____fork_log = require(GetScriptDirectory().."/FunLib/fork_log")
+local ForkLog = ____fork_log.ForkLog
 function ShortHero(name)
     return __TS__StringReplace(name, "npc_dota_hero_", "")
 end
@@ -103,7 +105,7 @@ function AskOnce(sig, candidates, bans, now, scheduleInitialized, s)
         s.waitUntil = now + FIRST_PICK_WAIT_SEC
     end
     local trimmed = #candidates > MAX_CANDIDATES and __TS__ArraySlice(candidates, 0, MAX_CANDIDATES) or candidates
-    print(((("[OHA-LLM] draft ask #" .. tostring(s.askedCount)) .. " (") .. tostring(#trimmed)) .. " candidates)")
+    ForkLog(((("[OHA-LLM] draft ask #" .. tostring(s.askedCount)) .. " (") .. tostring(#trimmed)) .. " candidates)")
     pickEvents[#pickEvents + 1] = ((((("[OHA-LLM] draft ask #" .. tostring(s.askedCount)) .. "/") .. tostring(MAX_DRAFT_ASKS)) .. " sent (") .. tostring(#trimmed)) .. " candidates)"
     AskDraftDirective(
         {candidates = trimmed, bans = bans},
@@ -129,7 +131,7 @@ function AskOnce(sig, candidates, bans, now, scheduleInitialized, s)
                     )
                 end
                 pickEvents[#pickEvents + 1] = ev
-                print(((("[OHA-LLM] draft directive active: " .. tostring(#directive.picks)) .. " picks, ") .. tostring(#directive.bans)) .. " bans")
+                ForkLog(((("[OHA-LLM] draft directive active: " .. tostring(#directive.picks)) .. " picks, ") .. tostring(#directive.bans)) .. " bans")
             else
                 pickEvents[#pickEvents + 1] = "[OHA-LLM] draft reply rejected/empty - default picks"
             end
