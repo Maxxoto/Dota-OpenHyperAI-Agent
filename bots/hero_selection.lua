@@ -983,17 +983,49 @@ end
 -- Think loop
 --==============================================================================
 -- Fork: auto-start FretBots mode (difficulty vote, neutral items, AI chat).
--- Upstream needs a manual console step (sv_cheats 1; script_reload_code
--- bots/fretbots). Think() only runs during hero selection, which is exactly
--- the game state FretBots.lua's own init guard requires. Opt out with
--- Customize.Enable_FretBots_By_Default = false.
+-- Upstream loads it only via the console (sv_cheats 1; script_reload_code
+-- bots/fretbots). FretBots.lua silently returns when loaded before hero
+-- selection, and require would then cache that abort for the whole game — so
+-- gate on the game state, verify it initialized, and retry the aborted load.
+-- Opt out with Customize.Enable_FretBots_By_Default = false.
 --==============================================================================
 local bFretBotsAutoStarted = false
+local nFretBotsAttempts = 0
+
+-- FretBots/Debug.lua mutes global print after loading, so log through both
+-- print and MsgN (the raw console logger that survives the override).
+local function ForkLog(msg)
+	pcall( print, msg )
+	pcall( MsgN, msg )
+end
 
 local function AutoStartFretBots()
 	if bFretBotsAutoStarted then return end
-	if Customize and Customize.Enable_FretBots_By_Default == false then return end
-	if pcall(require, GetScriptDirectory()..'/FretBots') then
+	if Customize and Customize.Enable_FretBots_By_Default == false then
+		bFretBotsAutoStarted = true
+		return
+	end
+	-- Before hero selection FretBots aborts itself; loading then would poison
+	-- the require cache, so wait for the picking phase first.
+	if GetGameState() == nil or GetGameState() < GAME_STATE_HERO_SELECTION then return end
+
+	nFretBotsAttempts = nFretBotsAttempts + 1
+	local sKey = GetScriptDirectory()..'/FretBots'
+	if nFretBotsAttempts == 1 then ForkLog('[OHA] auto-starting FretBots mode') end
+	local okFret, errFret = pcall( require, sKey )
+	if okFret and Debug ~= nil then
+		bFretBotsAutoStarted = true
+		ForkLog('[OHA] FretBots mode initialized')
+		return
+	end
+	-- Aborted (cached empty load) or errored: drop the cache so a retry can work.
+	package.loaded[ sKey ] = nil
+	package.loaded[ 'bots.FretBots' ] = nil
+	if not okFret then
+		ForkLog('[OHA] FretBots auto-start failed: '..tostring(errFret)..' | fallback: sv_cheats 1; script_reload_code bots/fretbots')
+		bFretBotsAutoStarted = true
+	elseif nFretBotsAttempts >= 3 then
+		ForkLog('[OHA] FretBots did not initialize after 3 tries | fallback: sv_cheats 1; script_reload_code bots/fretbots')
 		bFretBotsAutoStarted = true
 	end
 end
