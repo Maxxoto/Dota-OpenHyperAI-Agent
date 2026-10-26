@@ -1,6 +1,8 @@
 local X = {}
 
 local J = require(GetScriptDirectory()..'/FunLib/jmz_func')
+local okHumanize, HUMANIZE = pcall(require, GetScriptDirectory()..'/FunLib/llm_humanize')
+if not okHumanize then HUMANIZE = nil end
 local Customize = require(GetScriptDirectory()..'/Customize/general')
 
 local bot = GetBot()
@@ -117,13 +119,60 @@ end
 
 -- === existing functions, now reusing context ===
 
+-- === RFC-003 H4: human-like delayed danger reaction ===
+-- Module-local state, touched only inside GetHumanizedRetreatDesire().
+local tHumanReaction = { tDangerSince = nil }
+
+-- Damps a danger-driven retreat desire while the reaction window is still open:
+-- the desire ramps linearly from 0 to 1 over ReactionDelaySec() from the first
+-- Think that observes danger. Delay of 0 (gate off / binding missing) returns
+-- the desire untouched, so gate-off behaviour is unchanged (G5).
+local function GetHumanizedRetreatDesire(nBaseDesire)
+    local ok, nResult = pcall(function()
+        if type(nBaseDesire) ~= 'number' then return nBaseDesire end
+
+        local nDelay = 0
+        if HUMANIZE ~= nil then
+            local okDelay, nD = pcall(HUMANIZE.ReactionDelaySec)
+            if okDelay and type(nD) == 'number' then nDelay = nD end
+        end
+
+        if nDelay <= 0 then
+            tHumanReaction.tDangerSince = nil
+            return nBaseDesire
+        end
+
+        -- Base desire back near its calm baseline: danger has fully cleared.
+        if nBaseDesire < 0.2 then
+            tHumanReaction.tDangerSince = nil
+            return nBaseDesire
+        end
+
+        local nNow = DotaTime()
+        if tHumanReaction.tDangerSince == nil then
+            tHumanReaction.tDangerSince = nNow
+        end
+
+        local nElapsed = nNow - tHumanReaction.tDangerSince
+        if nElapsed < 0 then nElapsed = 0 end
+        if nElapsed >= nDelay then
+            return nBaseDesire
+        end
+
+        return nBaseDesire * (nElapsed / nDelay)
+    end)
+
+    if ok and type(nResult) == 'number' then return nResult end
+    return nBaseDesire
+end
+
 function GetDesire()
     -- local cacheKey = 'GetRetreatDesire'..tostring(bot:GetPlayerID())
     -- local cachedVar = J.Utils.GetCachedVars(cacheKey, 0.35 * (1 + Customize.ThinkLess))
     -- if DotaTime() > 30 and cachedVar ~= nil then return cachedVar end
     local res = GetDesireHelper()
     -- J.Utils.SetCachedVars(cacheKey, res)
-    return res
+    return GetHumanizedRetreatDesire(res)
 end
 
 function GetDesireHelper()

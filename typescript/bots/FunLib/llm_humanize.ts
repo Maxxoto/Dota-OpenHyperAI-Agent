@@ -41,3 +41,21 @@ export function LastHitDelayJitter(): number {
 	const sampled = SampleLatency(profile, "lastHit", RandomFloat(0, 1));
 	return sampled - (lo + hi) / 2;
 }
+
+/** Absolute danger-reaction delay in seconds; 0 when the layer is off. */
+export function ReactionDelaySec(): number {
+	const gate = Gate();
+	if (!gate.on) {
+		return 0;
+	}
+	return SampleLatency(ProfileFor(gate.tier), "reaction", RandomFloat(0, 1));
+}
+
+/** Absolute rotation-start delay in seconds; 0 when the layer is off. */
+export function RotationDelaySec(): number {
+	const gate = Gate();
+	if (!gate.on) {
+		return 0;
+	}
+	return SampleLatency(ProfileFor(gate.tier), "rotation", RandomFloat(0, 1));
+}

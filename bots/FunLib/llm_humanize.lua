@@ -39,4 +39,28 @@ function ____exports.LastHitDelayJitter()
     )
     return sampled - (lo + hi) / 2
 end
+--- Absolute danger-reaction delay in seconds; 0 when the layer is off.
+function ____exports.ReactionDelaySec()
+    local gate = Gate()
+    if not gate.on then
+        return 0
+    end
+    return SampleLatency(
+        ProfileFor(gate.tier),
+        "reaction",
+        RandomFloat(0, 1)
+    )
+end
+--- Absolute rotation-start delay in seconds; 0 when the layer is off.
+function ____exports.RotationDelaySec()
+    local gate = Gate()
+    if not gate.on then
+        return 0
+    end
+    return SampleLatency(
+        ProfileFor(gate.tier),
+        "rotation",
+        RandomFloat(0, 1)
+    )
+end
 return ____exports

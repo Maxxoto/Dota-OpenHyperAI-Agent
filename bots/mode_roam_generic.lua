@@ -1,5 +1,7 @@
 local J = require( GetScriptDirectory()..'/FunLib/jmz_func')
 local Customize = require( GetScriptDirectory()..'/Customize/general' )
+local okHumanize, HUMANIZE = pcall(require, GetScriptDirectory()..'/FunLib/llm_humanize')
+if not okHumanize then HUMANIZE = nil end
 
 local bot = GetBot()
 local botName = bot:GetUnitName()
@@ -48,13 +50,42 @@ local laneAndT1s = {
 	{LANE_BOT, TOWER_BOT_1}
 }
 
+-- Humanize (RFC-003 H3): humans take a beat before committing to a roam/gank.
+-- RotationDelaySec() is 0 while Allow_Humanized_Gameplay is false, so the
+-- gate-off desire is byte-identical (G5).
+local tRoamSince = nil
+local nRoamCalmDesire = 0.45
+
+local function GetRotationDelaySec()
+	if HUMANIZE == nil then return 0 end
+	local okR, nDelay = pcall(HUMANIZE.RotationDelaySec)
+	if okR and type(nDelay) == 'number' and nDelay > 0 then return nDelay end
+	return 0
+end
+
+local function ApplyRotationDelayDamping(desire)
+	if type(desire) ~= 'number' then return desire end
+	local nDelay = GetRotationDelaySec()
+	if nDelay == 0 then return desire end
+	local tNow = DotaTime()
+	if desire > nRoamCalmDesire then
+		if tRoamSince == nil then tRoamSince = tNow end
+		local nFraction = (tNow - tRoamSince) / nDelay
+		if nFraction < 0 then nFraction = 0 end
+		if nFraction < 1 then return desire * nFraction end
+		return desire
+	end
+	tRoamSince = nil
+	return desire
+end
+
 function GetDesire()
 	-- local cacheKey = 'GetRoamDesire'..tostring(bot:GetPlayerID())
 	-- local cachedVar = J.Utils.GetCachedVars(cacheKey, 0.5 * (1 + Customize.ThinkLess))
 	-- if DotaTime() > 30 and cachedVar ~= nil then return cachedVar end
 	local res = GetDesireHelper()
 	-- J.Utils.SetCachedVars(cacheKey, res)
-	return res
+	return ApplyRotationDelayDamping(res)
 end
 function GetDesireHelper()
 	botName = bot:GetUnitName()
