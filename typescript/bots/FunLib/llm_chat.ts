@@ -6,7 +6,7 @@
  * the local-table fallback - the async callback speaks or stays silent) or
  * "skipped" (layer off / cooldown / cap / dice - caller falls back to the
  * legacy local replies, G5). Timeouts are enforced by the gateway, the
- * per-game cap/cooldown/chance by llm_chat_core's limiter.
+ * reply cooldown by llm_chat_core's limiter (no per-game cap).
  */
 import * as Gateway from "./llm_gateway";
 import {

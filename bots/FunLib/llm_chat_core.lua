@@ -81,16 +81,20 @@ local ____exports = {}
 -- echo), and never an admission of being an AI (the prompt forbids it, the
 -- sanitizer rejects replies that break character).
 ____exports.CHAT_MAX_LEN = 140
-____exports.CHAT_MAX_PER_GAME = 12
-____exports.CHAT_COOLDOWN_SEC = 25
-____exports.CHAT_REPLY_CHANCE = 0.6
---- Human-player persona. Short, playful BM ("ez", "diff", "gap", "??"),
--- same language as the player, never breaks character, never offensive.
+____exports.CHAT_COOLDOWN_SEC = 10
+____exports.CHAT_REPLY_CHANCE = 1
+--- Human-player persona: SEA server trash talk.
+-- 
+-- The style samples come from the dffesalbon/dota-2-toxic-chat-data dataset
+-- (Hugging Face), filtered to lines that carry the SEA register without
+-- slurs, threats, sexual content or family insults.
 function ____exports.BuildChatPrompts(ctx)
     local system = table.concat({
-        "You are a real human Dota 2 player in the middle of a match, chatting with other players.",
-        "You are cocky, confident, and funny. You banter and trash talk, but never use slurs, hate speech, harassment, or anything you would not hear in a normal ranked match.",
-        "Write ONE chat message only. Keep it short like real game chat: usually under 12 words, all lowercase is fine, Dota slang is welcome (ez, diff, gap, ?, lol, outplayed, nice try).",
+        "You are a real human Dota 2 player on the SEA server, chatting with other players during a ranked match.",
+        "You are cocky, sarcastic and funny. You banter and trash talk the way SEA players do, mixing English with Filipino, Indonesian or Malay slang (bobo, tanga, noob, anjir, wkwk, sial, ez, diff, lag, report).",
+        "Hard limits: no racial, religious or homophobic slurs, no threats, no sexual talk, no insults about anyone's mother or family, nothing a normal ranked chat would get you banned for.",
+        "Write ONE chat message only. Keep it short like real game chat: usually under 12 words, all lowercase is fine.",
+        "Style samples from real SEA chat: \"report void and qop\" / \"trash offlane\" / \"why crying\" / \"mga tanga\" / \"u happy now\" / \"void you are really noob\" / \"he bitching about the lane\" / \"are u guys trash like the last team we faced\" / \"tang ina magquit kayo hahaha\" / \"ez mid\" / \"wkwk gg\".",
         "Reply in the SAME language the other player used.",
         "You are NOT an AI. Never mention being a bot, an AI, a script, or a language model. Stay in character at all times.",
         "No emojis, no links, no hashtags, no quotes around your message. Output only the chat text."
@@ -162,16 +166,12 @@ function ____exports.SanitizeChatReply(raw)
     end
     return line
 end
-____exports.DEFAULT_CHAT_LIMITER = {maxPerGame = ____exports.CHAT_MAX_PER_GAME, cooldownSec = ____exports.CHAT_COOLDOWN_SEC, chance = ____exports.CHAT_REPLY_CHANCE}
+____exports.DEFAULT_CHAT_LIMITER = {cooldownSec = ____exports.CHAT_COOLDOWN_SEC, chance = ____exports.CHAT_REPLY_CHANCE}
 --- Pure reply decision. `roll` is a 0..1 random supplied by the binding so
--- tests are deterministic. Returns true only when cap, cooldown, and the
--- dice all allow a reply.
+-- tests are deterministic. No per-game cap: trash talk stays on all game.
 function ____exports.ShouldReply(state, now, roll, config)
     if config == nil then
         config = ____exports.DEFAULT_CHAT_LIMITER
-    end
-    if state.replies >= config.maxPerGame then
-        return false
     end
     if now - state.lastReplyAt < config.cooldownSec then
         return false

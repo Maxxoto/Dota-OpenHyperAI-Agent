@@ -43,6 +43,6 @@ return {
         draft = true,   -- counter-picks/bans during hero selection
         builds = true,  -- adaptive item/skill builds
         desire = true,  -- reserved for Phase 2 (macro strategy bias); accepted and reported
-        chat = true,    -- human-like trash talk via Groq persona
+        chat = true,    -- human-like trash talk, SEA server style, replies on cooldown
     },
 }

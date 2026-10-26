@@ -7,7 +7,6 @@ import assert from "node:assert/strict";
 import {
 	BuildChatPrompts,
 	CHAT_MAX_LEN,
-	CHAT_MAX_PER_GAME,
 	SanitizeChatReply,
 	ShouldReply,
 	type ChatContext,
@@ -34,6 +33,8 @@ test("BuildChatPrompts keeps persona rules and match context", () => {
 	assert.match(p.system, /NOT an AI/);
 	assert.match(p.system, /SAME language/);
 	assert.match(p.system, /slurs/);
+	assert.match(p.system, /SEA server/);
+	assert.match(p.system, /mga tanga/);
 	assert.ok(p.system.includes("under 12 words"));
 	assert.ok(p.user.includes("Pudge.OHA"));
 	assert.ok(p.user.includes("21"));
@@ -72,18 +73,22 @@ test("SanitizeChatReply hard-cuts oversized replies at a word boundary", () => {
 	assert.ok(out.length <= CHAT_MAX_LEN + 3);
 });
 
-test("ShouldReply enforces cap, cooldown, and chance", () => {
+test("ShouldReply enforces cooldown and chance, with no per-game cap", () => {
 	const base: ChatLimiterState = { replies: 0, lastReplyAt: 0 };
-	assert.equal(ShouldReply(base, 100, 0.1), true);
-	assert.equal(ShouldReply(base, 100, 0.9), false, "roll above chance blocks");
+	assert.equal(ShouldReply(base, 100, 0.999), true);
 	assert.equal(
-		ShouldReply({ replies: 0, lastReplyAt: 90 }, 100, 0.1),
+		ShouldReply({ replies: 0, lastReplyAt: 98 }, 100, 0.1),
 		false,
 		"cooldown blocks"
 	);
 	assert.equal(
-		ShouldReply({ replies: CHAT_MAX_PER_GAME, lastReplyAt: 0 }, 1000, 0.1),
+		ShouldReply({ replies: 500, lastReplyAt: 0 }, 1000, 0.5),
+		true,
+		"no per-game cap blocks a late reply"
+	);
+	assert.equal(
+		ShouldReply(base, 100, 0.9, { cooldownSec: 10, chance: 0.5 }),
 		false,
-		"per-game cap blocks"
+		"roll above a reduced chance blocks"
 	);
 });
