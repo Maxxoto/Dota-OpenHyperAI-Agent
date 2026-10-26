@@ -144,8 +144,8 @@ function ____exports.EnvelopeParse(raw)
         local rawCalls = raw.tool_calls
         do
             local i = 0
-            while i < rawCalls.length do
-                local rawCall = rawCalls[i]
+            while i < #rawCalls do
+                local rawCall = rawCalls[i + 1]
                 if not IsTable(rawCall) or type(rawCall.tool) ~= "string" or rawCall.tool == "" then
                     return nil
                 end
@@ -226,10 +226,13 @@ function ____exports.ValidateToolCall(call, opts)
     end
     if tool == ____exports.TOOLS[1] then
         local lanePos = LaneToPos(lane)
-        if lanePos == 0 then
-            return {ok = false, reason = "lane-invalid"}
+        if lanePos ~= 0 then
+            return {ok = true, tool = tool, hero = hero, pos = lanePos}
         end
-        return {ok = true, tool = tool, hero = hero, pos = lanePos}
+        if IsPosition(pos) then
+            return {ok = true, tool = tool, hero = hero, pos = pos}
+        end
+        return {ok = false, reason = "lane-invalid"}
     end
     if not IsPosition(pos) then
         return {ok = false, reason = "pos-invalid"}
@@ -248,11 +251,11 @@ function ____exports.Prefilter(text, heroHints)
         local i = 0
         while i < #heroHints do
             do
-                local __continue45
+                local __continue46
                 repeat
                     local hint = heroHints[i + 1]
                     if type(hint) ~= "string" or hint == "" then
-                        __continue45 = true
+                        __continue46 = true
                         break
                     end
                     if __TS__StringIncludes(
@@ -262,9 +265,9 @@ function ____exports.Prefilter(text, heroHints)
                         hasHero = true
                         break
                     end
-                    __continue45 = true
+                    __continue46 = true
                 until true
-                if not __continue45 then
+                if not __continue46 then
                     break
                 end
             end

@@ -100,7 +100,9 @@ export function EnvelopeParse(raw: any): ChatEnvelope | undefined {
 		if (!Array.isArray(raw.tool_calls)) {
 			return undefined;
 		}
-		const rawCalls: any = raw.tool_calls;
+		// any[]-typed binding so tstl compiles .length to '#' (dkjson-decoded
+		// arrays carry no .length field; raw .length on `any` reads nil).
+		const rawCalls: any[] = raw.tool_calls;
 		for (let i = 0; i < rawCalls.length; i += 1) {
 			const rawCall: any = rawCalls[i];
 			if (!IsTable(rawCall) || typeof rawCall.tool !== "string" || rawCall.tool === "") {
@@ -186,11 +188,16 @@ export function ValidateToolCall(
 		return { ok: false, reason: "hero-not-teammate" };
 	}
 	if (tool === TOOLS[0]) {
+		// Accept either form: the raw lane word, or an already-resolved pos
+		// (the chat envelope path normalizes lane -> pos before this runs).
 		const lanePos = LaneToPos(lane);
-		if (lanePos === 0) {
-			return { ok: false, reason: "lane-invalid" };
+		if (lanePos !== 0) {
+			return { ok: true, tool: tool, hero: hero, pos: lanePos };
 		}
-		return { ok: true, tool: tool, hero: hero, pos: lanePos };
+		if (IsPosition(pos)) {
+			return { ok: true, tool: tool, hero: hero, pos: pos };
+		}
+		return { ok: false, reason: "lane-invalid" };
 	}
 	if (!IsPosition(pos)) {
 		return { ok: false, reason: "pos-invalid" };

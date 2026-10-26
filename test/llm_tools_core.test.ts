@@ -150,3 +150,14 @@ test("CanExecuteTool enforces the per-game cap and the cooldown", () => {
 	assert.equal(CanExecuteTool(1000, { executed: 3, lastAt: 0 }), true);
 	assert.equal(CanExecuteTool(100, { executed: 0, lastAt: 0 }, 1, 0), true);
 });
+
+test("ValidateToolCall accepts pos-resolved swap_lane (envelope-normalized form)", () => {
+	const v = ValidateToolCall(
+		{ tool: "swap_lane", args: { hero: "npc_dota_hero_axe", pos: 1 } },
+		{ teamBotHeroes: ["npc_dota_hero_axe"], humanHeroes: [] }
+	);
+	assert.equal(v.ok, true);
+	if (v.ok === true) {
+		assert.equal(v.pos, 1);
+	}
+});
