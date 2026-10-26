@@ -46,7 +46,7 @@ const transport: GatewayTransport = {
 			],
 			temperature: 0.4,
 		});
-		const req = CreateHTTPRequest("POST", url);
+		const req = CreateRemoteHTTPRequest(url);
 		req.SetHTTPRequestHeaderValue("Content-Type", "application/json");
 		if (apiKey !== "") {
 			req.SetHTTPRequestHeaderValue("Authorization", "Bearer " + apiKey);
