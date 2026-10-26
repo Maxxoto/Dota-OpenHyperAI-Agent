@@ -1,42 +1,126 @@
-# RFC-002: Humanized Strategy and Match Memory
+# RFC-002: Adaptive Strategy, Bot Identity, and Natural-Language Control
 
--   **Status:** DRAFT - awaiting approval
--   **Date:** 2026-10-27
--   **Extends:** [RFC-001](2026-10-11-llm-adaptive-bots-design.md) (draft, builds, chat shipped)
--   **Decisions locked with owner (2026-10-27):** Phase A (strategy) first; humanization is expression-only (no skill reduction); memory v1 is per-match only (no cross-match persistence yet). Framework phase F added same day: natural-language chat control via tool calls.
+|                                              |                                                                                                                                       |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**                                   | DRAFT - awaiting approval                                                                                                             |
+| **Date**                                     | 2026-10-27                                                                                                                            |
+| **Author**                                   | Maxxoto + agent                                                                                                                       |
+| **Extends**                                  | [RFC-001](2026-10-11-llm-adaptive-bots-design.md) - draft, builds, chat shipped                                                       |
+| **Decisions locked with owner (2026-10-27)** | Strategy first; identity is expression-only; memory v1 is per-match; intent router + tool calls confirmed; per-bot identity confirmed |
 
-## 1. Goals
+## 1. Executive Summary
 
-1. **Smarter** - team-level strategy that adapts to the actual match (push pressure, fight-vs-split, Roshan aggression, farm priority) instead of fixed heuristics.
-2. **More human** - bots with per-game personality: chattiness, tilt expression, timing variance, event-driven reactions. Expression only; competence untouched.
-3. **Per-match memory** - a rolling, byte-budgeted in-match event log that every later LLM ask consumes ("they 5-man at 20 min, keep split-push").
-4. **Natural-language control** - type like a human, not like a manual: `"axe go safelane"` instead of `!3pos 1`. The LLM detects intent, resolves hero and lane, and executes via validated tool calls.
+RFC-001 gave the bots an LLM advisor for drafts, builds, and chat - shipped and verified in lobbies. RFC-002 turns that advisor into a **decision-making system with a personality and a natural interface**:
 
-## 2. Non-goals (v1)
+1. **Adaptive team strategy** - the team re-plans at match checkpoints (push/defend/farm/Roshan weights), biased into Valve's existing desire system with hard clamps.
+2. **Bot identity system** - every bot gets a stable per-match identity (name, archetype, voice, tilt curve). Chat, suggestions, and compliance lines are voiced in-character by that bot; machine audit lines stay clearly prefixed. Competence is never reduced.
+3. **Natural-language control** - players type like humans (`"axe go safelane"`); an intent router + validated tool-call framework resolves the command against existing Dota 2 bot functions. Memorized `!commands` remain as a fallback.
+4. **Per-match memory** - a byte-budgeted rolling event log feeds every subsequent ask, and later cross-match learning.
 
--   No per-frame or per-second LLM calls (slow brain / fast reflexes, unchanged).
--   No skill reduction from personality: tilt changes what bots SAY and their timing variance, never their decision quality.
--   No cross-match persistence (Phase D sketch only; needs C's format proven in real matches first).
--   No new network endpoints beyond Groq; everything stays behind `Allow_LLM_Advisor` (G5: off = byte-identical default behavior).
+All of it ships dark behind `Allow_LLM_Advisor` (G5: disabled = byte-identical default behavior), reuses the proven gateway (queue/budget/cache/timeout), and logs every LLM decision to the visible channels established in RFC-001's deployment.
 
-## 3. Phase A - Strategic desire bias (first milestone)
+## 2. Background & Motivation
 
-### 3.1 Checkpoints
+-   **Uniform bots.** All 10 bots share one voice and fixed heuristics; nothing distinguishes them or makes them feel human.
+-   **Static strategy.** Push/defend/farm desires are Valve C++ defaults plus fixed OHA tuning; they do not react to how the match is actually going.
+-   **Memorized commands.** Controlling bots requires manual syntax (`!3pos 4`); humans say `"axe go safelane"`.
+-   **No memory.** Every ask starts from zero context; mid-game patterns (enemy 5-mans after 20 min) are invisible to the advisor.
 
-Strategy is re-evaluated at fixed checkpoints, never continuously:
+RFC-001's substrate is already in production: gateway with phase budgets (12 policy / 30 chat), directive validators with whole-payload discard, chat persona with rate limiting, visible decision logging, and 44 offline tests plus live Groq round-trips.
 
-| Checkpoint  | Trigger                      | Notes                                                                  |
-| ----------- | ---------------------------- | ---------------------------------------------------------------------- |
-| C0          | Post-draft, ~0:00            | Consumes the draft directive's context; free continuity                |
-| C1..Cn      | Every 5 minutes of game time | Bounded: max 8 strategy asks per game (policy budget 12 minus 2 draft) |
-| Event bonus | Team wipe, Roshan, 3rd tower | Consumes the next slot; never exceeds the cap                          |
+## 3. Goals & Non-Goals
 
-Each checkpoint is fire-and-observe (async), identical to the draft ask loop. A late or failed reply means the previous directive stays active - never a stall.
+**Goals**
 
-### 3.2 Ask and directive
+-   G1 - Team strategy adapts at bounded checkpoints, applied as clamped multipliers on existing desire seams.
+-   G2 - Every bot has a distinct, stable identity that voices chat, suggestions, and tool-call compliance.
+-   G3 - Natural chat is a first-class command interface via validated tool calls bound to existing game functions.
+-   G4 - Every LLM decision is observable (audit line + in-character line) and every capability is individually toggleable.
+-   G5 - Zero regression: layer off or failing => byte-identical default bot behavior.
 
--   **Input:** `SerializeMatch` (already in `llm_state_core`, currently unused) - towers, kills/deaths, enemy net worth/items, game time, lane pressures, plus Phase C memory notes once it exists.
--   **Output schema (`strategy` directive, validated, whole-directive discard on error):**
+**Non-Goals (v1)**
+
+-   No per-frame LLM calls; no skill reduction from identity; no cross-match persistence (sketch only); no new endpoints beyond Groq; no training/fine-tuning.
+
+## 4. System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Ingress
+        A1[Draft chat callback<br/>SelectHeroChatCallback]
+        A2[In-game chat callback<br/>SetReplyHumanTime]
+        A3[Checkpoint timer<br/>strategy scheduler]
+    end
+
+    subgraph Core["Decision Core (team VM, TypeScript)"]
+        B1[Pre-filter<br/>heuristic, no LLM]
+        B2[Intent Router + Envelope<br/>reply + tool_calls, one ask]
+        B3[Strategy Ask<br/>SerializeMatch + memory]
+        B4[Validators<br/>schema - clamp - discard]
+        B5[Tool Registry<br/>queue, apply next tick]
+        B6[Identity Store<br/>per-bot cards]
+        B7[Match Memory<br/>event log, byte-budgeted]
+    end
+
+    subgraph Gateway["LLM Gateway (RFC-001)"]
+        C1[queue - budget - cache - timeout]
+    end
+
+    D1[(Groq API<br/>qwen3.8-27b)]
+
+    subgraph Seams["Game Seams (existing functions)"]
+        E1[Role assignment<br/>!Xpos path / hero_selection]
+        E2[Desires consumption<br/>jmz_func Get*Desire]
+        E3[Build merge<br/>J.SetUserHeroInit]
+        E4[Bot chat<br/>ActionImmediate_Chat]
+        E5[Pick / ban<br/>SelectHero - CMBanHero]
+    end
+
+    A1 --> B1
+    A2 --> B1
+    B1 -->|banter| B2
+    B1 -->|command-shaped| B2
+    A3 --> B3
+    B2 --> C1
+    B3 --> C1
+    C1 <--> D1
+    C1 --> B4
+    B4 -->|strategy| E2
+    B4 -->|envelope reply| E4
+    B4 -->|tool_calls| B5
+    B5 --> E1
+    B5 --> E5
+    B3 --> E3
+    B6 --> B2
+    B7 --> B3
+    B7 --> B2
+```
+
+**Messaging taxonomy** (how decisions surface):
+
+| Channel      | Prefix / voice               | Examples                                                         |
+| ------------ | ---------------------------- | ---------------------------------------------------------------- |
+| Audit        | `[OHA-LLM]` system lines     | `strategy @15m: split-push (ask 3/8)`, `build axe (pos 3): ...`  |
+| In-character | none - the bot itself speaks | `"on it, going safe"`, `"we should smoke mid, they're grouping"` |
+| Silent state | overlay only                 | `[OHA-LLM] FORK ACTIVE gate=ON ...` (draft screen)               |
+
+Audit lines are generated by the framework; in-character lines are generated by the bot's identity. Tool compliance and strategic suggestions are in-character; state changes are audited.
+
+## 5. Workstream A - Adaptive Team Strategy
+
+### 5.1 Checkpoint model
+
+Fire-and-observe (never blocking), identical to the draft ask loop. A late or failed reply means the previous directive stays active.
+
+| Checkpoint  | Trigger                        | Bound                                              |
+| ----------- | ------------------------------ | -------------------------------------------------- |
+| C0          | post-draft (~0:00)             | free continuity from the draft directive           |
+| C1..Cn      | every 5 min game time          | max 8 strategy asks/game (policy 12 minus 2 draft) |
+| event bonus | team wipe / Roshan / 3rd tower | consumes the next slot; cap never exceeded         |
+
+### 5.2 Ask & directive
+
+Input: `SerializeMatch` (shipped, currently unused) - towers, K/D/A, enemy net worth and items, game time, lane pressures, memory notes. Output (`oha-strategy-v1`, whole-payload discard on any validation failure):
 
 ```json
 {
@@ -50,66 +134,40 @@ Each checkpoint is fire-and-observe (async), identical to the draft ask loop. A 
 }
 ```
 
-All numeric fields clamped to [0, 1] in the validator; `stance` is one of an enum used only for the visible announcement and the chat persona's framing, not for control flow.
+Numerics clamped to [0,1]; `stance` is an enum used for announcements and identity framing only - never control flow.
 
-### 3.3 Application seam (the critical zero-regression decision)
+### 5.3 Application seam (zero-regression decision)
 
-The fork has **no `team_desires.lua`**; bots read Valve's C++ default desires through exactly one consumption seam: the push/defend/farm aggregation in `jmz_func.lua` (~line 3437, `GetPushLaneDesire` etc.).
+The fork consumes Valve's C++ team desires at exactly one seam: the push/defend/farm aggregation in `jmz_func.lua` (~L3437). Strategy applies there: `effective = clamp(base * (1 - a) + directive * a)`, `a <= 0.5` - the same merge shape as draft scores. Gate off => identity multiplier.
 
--   **Chosen:** apply validated multipliers at that seam, wrapped in a TS helper (`llm_strategy.ts`): `effective = clamp(base * (1 - alpha) + directive * alpha)` with `alpha <= 0.5`, mirroring the draft score merge. Gate off => multiplier is identity, byte-identical behavior (G5).
--   **Rejected:** implementing `team_desires.lua` (the Valve override file). Overriding replaces the C++ defaults wholesale, and scripts cannot read the would-be default values back (circular `Get*Desire` calls) - an unacceptable regression surface for a bias feature.
+**Rejected alternative:** implementing `team_desires.lua`. Overriding replaces the C++ defaults wholesale and scripts cannot read the would-be defaults back (circular `Get*Desire`) - an unacceptable regression surface for a bias feature.
 
-### 3.4 Visibility
+### 5.4 Checkpoint sequence
 
-Every checkpoint logs to the proven channels (chat/message feed + console): `[OHA-LLM] strategy @15m: split-push, push mid/bot (ask 3/8)` - consistent with the draft and build announcements.
+```mermaid
+sequenceDiagram
+    autonumber
+    participant T as Team VM (scheduler)
+    participant M as Memory (event log)
+    participant G as Gateway
+    participant L as Groq (qwen3.8-27b)
+    participant S as Desires seam (jmz_func)
+    participant CH as Chat / feed
 
-## 4. Phase B - Humanization (expression only)
-
-### 4.1 Personality profile
-
-Seeded once per bot per game (`llm_personality_core.ts`, pure): `{ chattiness: 0..1, tilt: 0..1, aggressionStyle: "cocky"|"chill"|"whiny", timingJitter: 0..1 }`. Deterministic per game seed, logged at spawn alongside build announcements.
-
-### 4.2 What it affects (and never affects)
-
-| Affects                                                      | Never affects                           |
-| ------------------------------------------------------------ | --------------------------------------- |
-| Chat reply chance / cooldown scaling (persona knobs per-bot) | Any decision quality, mode selection    |
-| Event chat triggers (first blood, spree, tower death, GG)    | Build or skill choices                  |
-| Response timing jitter on non-critical actions               | Reaction speed on danger checks         |
-| Tilt _expression_: chat tone via persona context             | Tilt _decisions_: thresholds stay fixed |
-
-### 4.3 Chat integration
-
-Extends `llm_chat_core.BuildChatPrompts` with personality + live context (current stance from Phase A, tilt counter, recent events from Phase C). Rate limits remain global (budget 30, 25s cooldown, 12/game) - personality only re-weights the existing dice.
-
-## 5. Phase C - Per-match memory
-
-### 5.1 Event log
-
-`llm_state_core` gains a compact append-only match log (fixed slots, oldest evicted, byte-budgeted like `STATE_BUDGET_BYTES`):
-
-```
-00:40 first_blood radiant
-07:12 tower t1_bot dire
-18:30 fight 4-1 dire (roshan)
-20:05 enemy_group_5
-26:44 item: enemy carry blink
+    T->>M: collect match state + log tail
+    T->>G: Ask(policy, strategy prompt)
+    G->>L: POST /chat/completions
+    L-->>G: strategy JSON
+    G-->>T: validated directive (or discard - keep previous)
+    T->>S: multipliers a<=0.5 (next consumption tick)
+    T->>CH: audit "[OHA-LLM] strategy @15m ..." + captain voice suggestion
 ```
 
-Events are appended from existing seams (kill/death counters in `SetTalkMessage`, tower/push logic, item purchase observations) - a handful of one-line Lua hooks into TS helpers, no new decision paths.
+## 6. Workstream F - Natural-Language Intent Router & Tool Framework
 
-### 5.2 Injection
+### 6.1 Design
 
--   Every strategy ask (Phase A) and chat ask (Phase B/F) carries the log tail as context (already the shape `AskDraftDirective`'s `memoryNotes` parameter anticipates).
--   Mid-match pattern notes ("enemy 5-mans after 20") only ever bias LLM _suggestions_; they never act alone.
-
-## 6. Phase F - Natural-language control framework (tool calls)
-
-Own framework, no more memorized commands: you type like a human (`"axe go safelane, cm come mid"`) and the layer turns it into validated tool calls. This is the fork's generic command surface - lane swap is the v1 tool; every future control plugs into the same registry.
-
-### 6.1 Single-ask router
-
-Every human chat message flows through the existing persona/chat seam. One gateway call returns a structured envelope - a chat reply, tool calls, or both:
+Human chat is the command line. A heuristic pre-filter (lane words, hero names, imperative verbs - no LLM) decides whether a message is command-shaped; command-shaped messages route through the **same gateway ask the persona uses**, returning one envelope:
 
 ```json
 {
@@ -119,60 +177,135 @@ Every human chat message flows through the existing persona/chat seam. One gatew
 }
 ```
 
--   **Cost control:** a cheap local pre-filter (lane words, hero names, imperative verbs) decides whether a message is routed to the LLM at all; pure banter skips the router or rides the persona dice unchanged.
--   **No native function-calling dependency:** the envelope is prompt-emitted JSON validated like every other directive (model-agnostic, works on any OpenAI-compatible endpoint). Native Groq tool-use can be an optimization later if the model supports it.
--   Failure/discard => no tool runs, optional local fallback reply (G5).
+-   One call serves reply + intent - no extra budget.
+-   Prompt-emitted JSON, validated like every directive; **no dependency on native function-calling** (model-agnostic; native tool-use is a later optimization if the model supports it).
+-   Discard => no tool runs, optional local fallback (G5).
 
-### 6.2 Tool registry (the framework)
+### 6.2 Tool registry - bound to existing Dota 2 functions
 
-Each tool = name + arg schema + validator + executor + announcement. Executors never run inside the chat callback: they enqueue into team-VM module state and apply on the next safe tick (chat callbacks fire per bot; execution must be once, in the team context).
+Each tool: name, arg schema, validator, executor, announcement. Executors enqueue into team-VM state and apply on the next safe tick - never inside a per-bot chat callback.
 
-| Tool                                              | Args                     | Executor (v1)                                                      |
-| ------------------------------------------------- | ------------------------ | ------------------------------------------------------------------ |
-| `swap_lane`                                       | hero, lane(safe/mid/off) | maps to position 1/2/3 and reuses the existing `!Xpos Y` role path |
-| `swap_position`                                   | hero, pos 1-5            | direct role reassignment, same path                                |
-| (later) `group_up`, `push_focus`, `farm_priority` | ...                      | compose on Phase A's strategy multipliers                          |
+| Tool                                              | Args                     | Existing function invoked (v1)                                                |
+| ------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------- |
+| `swap_lane`                                       | hero, lane(safe/mid/off) | position 1/2/3 mapping -> the `!Xpos Y` role-assignment path (hero_selection) |
+| `swap_position`                                   | hero, pos 1-5            | same role-assignment path                                                     |
+| `suggest_pick` / `suggest_ban`                    | hero                     | `SelectHero` / ban list merge in the draft callback window                    |
+| `group_up`, `push_focus`, `farm_priority` (later) | ...                      | compose on Workstream A multipliers                                           |
 
-Validators check: hero is a teammate bot (never humans, never enemies), lane/pos in range, rate limit (max ~4 tool calls per game, 30s cooldown). Every execution is announced: `[OHA-LLM] axe -> safe lane (from "axe go safelane")`.
+Validators: hero must be a teammate **bot** (never humans, never enemies), lane/pos in range, rate limit (~4 tool calls/game, 30 s cooldown). Draft window: the router also runs on the pick-phase callback so `"ban am and pick ls"` works as natural language.
 
-### 6.3 Draft window
+### 6.3 Command sequence
 
-During hero selection the same router runs on the pick-phase chat callback (`SelectHeroChatCallback` seam) so `"ban am and pick ls"` works as natural language alongside `!ban`/`!pick`.
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as Player
+    participant CB as Chat callback (per bot)
+    participant PF as Pre-filter
+    participant G as Gateway + Groq
+    participant V as Envelope validator
+    participant Q as Tool queue (team VM)
+    participant X as Executor (role assignment)
+    participant CH as Chat
 
-## 7. Phase D - Cross-match learning (sketch, deliberately last)
+    P->>CB: "axe go safelane"
+    CB->>PF: command-shaped?
+    PF-->>CB: yes (lane word + hero name)
+    CB->>G: Ask(chat, persona + intent envelope)
+    G-->>V: { reply: "on it", tool_calls: [swap_lane axe safe] }
+    V->>Q: validated call (teammate bot? in range? rate ok?)
+    Q->>X: next safe tick
+    X->>CH: audit "[OHA-LLM] axe -> safe lane"
+    X->>CH: axe (in-character): "roger, safe lane it is"
+```
 
-Post-match, summarize the match + directive outcomes into a small JSON written to gitignored `game/Customize/memory/` (per game mode). Next game's draft/strategy asks read it ("last game: they counter-picked our PA with MK - respect it"). Requires C's format proven across real matches; also the seam for the planned out-of-game `npm run learn` analysis loop.
+## 7. Workstream I - Bot Identity System
 
-## 8. Budgets and latency
+### 7.1 Identity card
 
-| Phase           | Budget                                   | Latency tolerance                                |
-| --------------- | ---------------------------------------- | ------------------------------------------------ |
-| Draft (shipped) | 2/game                                   | 6s grace on first pick                           |
-| Strategy (A)    | 8/game from policy 12                    | none - non-blocking, old directive holds         |
-| Chat (shipped)  | 12 effective/30 budget                   | drop-on-slow                                     |
-| Router (F)      | shares the chat ask (one call, envelope) | 8s - late tool call is dropped, human can repeat |
+Seeded once per bot per game (deterministic per game seed; pure module `llm_identity_core.ts`), logged at spawn next to build announcements:
 
-## 9. Plan tasks
+| Field          | Values / range                                  | Purpose                                     |
+| -------------- | ----------------------------------------------- | ------------------------------------------- |
+| `handle`       | derived from hero + suffix (e.g. "axe_enjoyer") | chat signature, attribution                 |
+| `archetype`    | cocky / chill / whiny / strategist              | voice and suggestion style                  |
+| `chattiness`   | 0..1                                            | per-bot reply chance (within global limits) |
+| `tiltCurve`    | 0..1                                            | how fast tone shifts after deaths           |
+| `timingJitter` | 0..1                                            | cosmetic response delay variance            |
+| `catchphrases` | 2-3 seeded phrases                              | few-shot voice anchors in prompts           |
 
--   **S1** `llm_strategy_core.ts`: directive schema, validator, clamps, merge math + node tests.
--   **S2** `llm_strategy.ts` binding + checkpoint scheduler in the team VM + `SerializeMatch` wiring.
--   **S3** `jmz_func.lua` seam hook (multiplier application, G5-identity when off) + chat announcement.
--   **S4** Strategy smoke + live roundtrip; in-lobby verification gate (announcements visible, `!llm status` shows strategy asks).
--   **F1** Envelope schema + tool registry core (`llm_tools_core.ts`): validation, hero/lane resolution, rate limits + node tests.
--   **F2** Router merge into the chat persona ask (single call) + pre-filter.
--   **F3** `swap_lane`/`swap_position` executors wired to the existing role-assignment path + chat announcements + draft-window variant.
--   **F4** Router smoke + live lobby gate (natural chat moves a bot's lane; announcement logged).
--   **M1** Match event log in `llm_state_core` + append hooks.
--   **M2** Log injection into strategy + chat asks.
--   **H1** `llm_personality_core.ts` + seeding + spawn announcement.
--   **H2** Persona integration into `llm_chat` (per-bot chance/cooldown/tone) + event chat triggers.
+### 7.2 Where identity speaks
 
-Order: S1-S4 (milestone 1), then F1-F4 (framework - natural control, shares the persona ask), then M1-M2 (memory enriches strategy + router context), then H1-H2.
+-   **Chat replies** - the persona prompt becomes per-bot (identity card in, voice out). Global rate limits (30 budget / 12 effective / 25 s cooldown) stay; identity only re-weights dice and tone.
+-   **Tool compliance** - `"roger, safe lane it is"` instead of a bare audit line.
+-   **Strategic suggestions** - Workstream A's checkpoint can emit a captain-bot in-character line (`"they keep grouping, let's split push"`) alongside the audit line - the humanized face of strategy.
+-   **Event reactions** - first blood, spree, tower deaths, GG-call timing (extends today's local taunts with identity-voiced versions; local tables remain the fallback).
 
-## 10. Open questions
+### 7.3 Hard boundary: expression only
 
-1. Strategy checkpoint cadence: 5 min fixed vs event-weighted slots - default above, tune after first lobby soak.
-2. Should the `stance` field also nudge chat persona tone, or stay display-only? (Default: display-only in v1.)
-3. Event-log eviction policy: pure oldest-first vs keeping "anchor" events (first blood, Roshan) pinned. Default: oldest-first, revisit with real logs.
-4. Router pre-filter strictness: miss a valid command vs spend an ask on banter - default leans strict (fewer calls), loosen with real logs.
-5. Does `qwen3.8-27b` on Groq support native tool-use? Prompt-emitted JSON is the v1 path regardless; check via the models endpoint during F1.
+Identity affects **what bots say and when** - never decision quality, mode selection, builds, or reaction speed on danger checks. Tilt changes tone, not thresholds. This is enforced structurally: identity data is only readable by the chat/announcement modules; the strategy, build, and ability modules have no import path to it.
+
+## 8. Workstream C - Per-Match Memory
+
+Byte-budgeted, append-only event log in `llm_state_core` (fixed slots, oldest evicted):
+
+```
+00:40 first_blood radiant
+07:12 tower t1_bot dire
+18:30 fight 4-1 dire (roshan)
+20:05 enemy_group_5
+26:44 item: enemy carry blink
+```
+
+Appended from existing seams (kill/death counters, tower/push logic, purchase observations) as one-line hooks. The log tail rides every strategy and chat ask (`memoryNotes` parameter already exists in the ask API). Patterns only ever bias suggestions - they never act alone.
+
+## 9. Workstream D - Cross-Match Learning (deferred sketch)
+
+Post-match summary JSON to gitignored `game/Customize/memory/` (per game mode); next match's asks read it. Gate: C's format proven across real matches. Later the seam for out-of-game `npm run learn` analysis.
+
+## 10. Budgets, Latency, Safety
+
+| Capability        | Budget                                   | Latency behavior                       |
+| ----------------- | ---------------------------------------- | -------------------------------------- |
+| Draft (shipped)   | 2/game                                   | 6 s grace on first pick, then defaults |
+| Strategy (A)      | 8/game (policy 12)                       | non-blocking; previous directive holds |
+| Chat + Router (F) | one ask/message, 12 effective, 30 budget | drop-on-slow; late tool call dropped   |
+| Tools (F)         | ~4 executions/game                       | 30 s cooldown, teammate-bots-only      |
+
+Safety: every envelope/tool validated (schema + authorization + rate); whole-payload discard; G5 identity multipliers; no PII beyond player names in prompts; audit line for every executed tool.
+
+## 11. Roadmap & Acceptance Criteria
+
+| Milestone            | Tasks                              | Acceptance criteria                                                                                                                             |
+| -------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1 Strategy (S1-S4)  | core+binding+seam+smoke            | lobby: `[OHA-LLM] strategy` lines each checkpoint; desires visibly shift post-wipe; `!llm status` shows strategy asks; G5 off = identical play  |
+| M2 Framework (F1-F4) | envelope+registry+router+executors | lobby: `"axe go safelane"` moves the bot; audit + compliance lines; `!3pos` still works; misroute (enemy hero / human) rejected with audit line |
+| M3 Memory (M1-M2)    | event log + injection              | roundtrip: strategy/chat prompts contain log tail; byte budget enforced in tests                                                                |
+| M4 Identity (H1-H2)  | cards + persona integration        | two bots answer the same message in distinct voices; catchphrases observable; zero change to non-chat behavior                                  |
+
+Order: M1 -> M2 -> M3 -> M4 (memory enriches strategy+router; identity rides the finished chat stack last).
+
+## 12. Risks & Mitigations
+
+| Risk                                   | Mitigation                                                          |
+| -------------------------------------- | ------------------------------------------------------------------- |
+| Strategy bias weakens play             | a<=0.5 clamp, G5 kill switch, per-checkpoint audit, soak games      |
+| Router misfires on banter              | strict pre-filter, tool rate limit, whole-envelope discard          |
+| Identity drifts into offensive content | sanitizer rejects; archetype presets; no slurs rule in every prompt |
+| Latency spikes on Groq                 | drop-on-slow everywhere; caches; per-phase budgets                  |
+| Budget exhaustion early                | checkpoint caps; shared chat+router ask; cache keyed by message     |
+| Native tool-use absent on model        | prompt-emitted JSON (already the design)                            |
+
+## 13. Open Questions
+
+1. Checkpoint cadence: 5 min fixed vs event-weighted slots (default: fixed, tune after soak).
+2. Does `stance` influence identity tone or stay display-only? (default: display-only v1)
+3. Memory eviction: oldest-first vs pinned anchor events (default: oldest-first).
+4. Pre-filter strictness: miss commands vs spend asks on banter (default: strict).
+5. Native tool-use availability on `qwen3.8-27b` (check in F1; design does not depend on it).
+
+## 14. Appendix - Schemas
+
+-   `oha-strategy-v1` - see §5.2.
+-   `oha-chat-envelope-v1` - `{ reply?: string, tool_calls?: [{ tool: string, args: object }] }`, reply sanitized per `llm_chat_core.SanitizeChatReply`, tool args per registry schema.
+-   Identity card - see §7.1; serialized into prompts under the state byte budget.
