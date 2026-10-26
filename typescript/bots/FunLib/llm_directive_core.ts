@@ -169,6 +169,23 @@ function IsDict(v: any): boolean {
 	return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+/**
+ * Empty tables are ambiguous in the Lua runtime: dkjson does not tag objects
+ * vs arrays, and tstl's Array.isArray reports an empty table as an array — so
+ * `{}` and `[]` decode identically. Treat an empty, non-JS-array value as an
+ * empty dict where an empty object is legal (a real JS array has .length, a
+ * raw Lua table does not).
+ */
+function IsEmptyDict(v: any): boolean {
+	if (typeof v !== "object" || v === null) {
+		return false;
+	}
+	if (Array.isArray(v) && (v as { length?: number }).length !== undefined) {
+		return false;
+	}
+	return Object.keys(v).length === 0;
+}
+
 function DefaultItemCheck(name: string): boolean {
 	if (name.length < 6 || name.length > 60) {
 		return false;
@@ -318,7 +335,7 @@ export function ParseAndValidate(rawText: string, opts: ValidateOptions): ParseO
 	// ---- builds ----
 	const builds: { [hero: string]: DirectiveBuild | undefined } = {};
 	if (root.builds !== undefined && root.builds !== null) {
-		if (!IsDict(root.builds)) {
+		if (!IsDict(root.builds) && !IsEmptyDict(root.builds)) {
 			return { ok: false, error: "builds" };
 		}
 		for (const hero in root.builds) {

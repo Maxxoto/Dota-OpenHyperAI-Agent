@@ -301,6 +301,13 @@ test("structural violations discard the whole directive", () => {
 	);
 });
 
+test("empty builds object is valid (Lua runtime decodes {} and [] the same)", () => {
+	const d = parse(
+		`{"schema":"${SCHEMA_V1}","phase":"draft","picks":[{"hero":"npc_dota_hero_axe","weight":0.5}],"builds":{}}`
+	);
+	assert.deepEqual(d.builds, {});
+});
+
 test("BuildHeroWhitelist marks exactly the given names", () => {
 	const wl = BuildHeroWhitelist(["a", "b"]);
 	assert.equal(wl.a, true);

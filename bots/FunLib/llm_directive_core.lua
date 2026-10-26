@@ -20,6 +20,16 @@ local function __TS__ArrayIsArray(value)
     return type(value) == "table" and (value[1] ~= nil or next(value) == nil)
 end
 
+local function __TS__ObjectKeys(obj)
+    local result = {}
+    local len = 0
+    for key in pairs(obj) do
+        len = len + 1
+        result[len] = key
+    end
+    return result
+end
+
 local function __TS__StringCharAt(self, pos)
     if pos ~= pos then
         pos = 0
@@ -127,6 +137,20 @@ end
 local function IsDict(v)
     return type(v) == "table" and v ~= nil and not __TS__ArrayIsArray(v)
 end
+--- Empty tables are ambiguous in the Lua runtime: dkjson does not tag objects
+-- vs arrays, and tstl's Array.isArray reports an empty table as an array — so
+-- `{}` and `[]` decode identically. Treat an empty, non-JS-array value as an
+-- empty dict where an empty object is legal (a real JS array has .length, a
+-- raw Lua table does not).
+local function IsEmptyDict(v)
+    if type(v) ~= "table" or v == nil then
+        return false
+    end
+    if __TS__ArrayIsArray(v) and v.length ~= nil then
+        return false
+    end
+    return #__TS__ObjectKeys(v) == 0
+end
 local function DefaultItemCheck(name)
     if #name < 6 or #name > 60 then
         return false
@@ -220,7 +244,7 @@ function ____exports.ParseAndValidate(rawText, opts)
         local seen = {}
         for ____, entry in ipairs(picksArr) do
             do
-                local __continue47
+                local __continue50
                 repeat
                     if not IsDict(entry) then
                         return {ok = false, error = "pick"}
@@ -233,7 +257,7 @@ function ____exports.ParseAndValidate(rawText, opts)
                     end
                     if seen[entry.hero] == true then
                         warnings[#warnings + 1] = "dup-pick:" .. tostring(entry.hero)
-                        __continue47 = true
+                        __continue50 = true
                         break
                     end
                     seen[entry.hero] = true
@@ -248,9 +272,9 @@ function ____exports.ParseAndValidate(rawText, opts)
                         warnings[#warnings + 1] = "clamp-pick:" .. tostring(entry.hero)
                     end
                     picks[#picks + 1] = pick
-                    __continue47 = true
+                    __continue50 = true
                 until true
-                if not __continue47 then
+                if not __continue50 then
                     break
                 end
             end
@@ -290,7 +314,7 @@ function ____exports.ParseAndValidate(rawText, opts)
     end
     local builds = {}
     if root.builds ~= nil and root.builds ~= nil then
-        if not IsDict(root.builds) then
+        if not IsDict(root.builds) and not IsEmptyDict(root.builds) then
             return {ok = false, error = "builds"}
         end
         for hero in pairs(root.builds) do
