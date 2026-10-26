@@ -12,6 +12,7 @@
  * materializes), and the first pick waits a bounded grace window for the
  * first response before falling back to existing pacing.
  */
+import { MemoryNotes } from "./llm_crossmatch";
 import { AskDraftDirective, CachedDraftDirective, DraftAskEnabled } from "./llm_directive";
 import { MergeDraftScore } from "./llm_directive_core";
 import { ForkLog } from "./fork_log";
@@ -165,7 +166,7 @@ function AskOnce(
 		"[OHA-LLM] draft ask #" + s.askedCount + "/" + MAX_DRAFT_ASKS
 		+ " sent (" + trimmed.length + " candidates)"
 	);
-	AskDraftDirective({ candidates: trimmed, bans }, "", (directive) => {
+	AskDraftDirective({ candidates: trimmed, bans }, MemoryNotes(), (directive) => {
 		s.inFlight = false;
 		if (directive !== undefined) {
 			const pickNames = directive.picks.map((p) => ShortHero(p.hero)).join(",");

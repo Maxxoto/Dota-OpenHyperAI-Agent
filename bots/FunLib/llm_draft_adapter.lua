@@ -74,6 +74,8 @@ end
 -- End of Lua Library inline imports
 local ____exports = {}
 local ShortHero, SignatureOf, AskOnce, MAX_DRAFT_ASKS, FIRST_PICK_WAIT_SEC, MAX_CANDIDATES, pickEvents
+local ____llm_crossmatch = require(GetScriptDirectory().."/FunLib/llm_crossmatch")
+local MemoryNotes = ____llm_crossmatch.MemoryNotes
 local ____llm_directive = require(GetScriptDirectory().."/FunLib/llm_directive")
 local AskDraftDirective = ____llm_directive.AskDraftDirective
 local CachedDraftDirective = ____llm_directive.CachedDraftDirective
@@ -109,7 +111,7 @@ function AskOnce(sig, candidates, bans, now, scheduleInitialized, s)
     pickEvents[#pickEvents + 1] = ((((("[OHA-LLM] draft ask #" .. tostring(s.askedCount)) .. "/") .. tostring(MAX_DRAFT_ASKS)) .. " sent (") .. tostring(#trimmed)) .. " candidates)"
     AskDraftDirective(
         {candidates = trimmed, bans = bans},
-        "",
+        MemoryNotes(),
         function(directive)
             s.inFlight = false
             if directive ~= nil then
