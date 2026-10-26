@@ -567,7 +567,10 @@ function Chat.GetReplyString( sString, bAllChat )
 		end
 		if sReplyString == nil or RandomInt( 1, 100 ) > 90
 		then
-			sReplyString = Localization.Get('random_responses')[RandomInt( 1, #Localization.Get('random_responses'))]
+			local tRandom = Localization.Get('random_responses')
+			if type( tRandom ) == 'table' and #tRandom > 0 then
+				sReplyString = tRandom[RandomInt( 1, #tRandom )]
+			end
 		end
 	end
 
@@ -640,7 +643,9 @@ function Chat.GetReplyTauntString()
 end
 
 function Chat.GetStopReplyString()
-	return Localization.Get('no_more_talking')[RandomInt( 1, #Localization.Get('no_more_talking'))]
+	local tStop = Localization.Get('no_more_talking')
+	if type( tStop ) ~= 'table' or #tStop == 0 then return nil end
+	return tStop[RandomInt( 1, #tStop )]
 end
 
 

@@ -501,7 +501,10 @@ function X.SetTalkMessage()
 				if chatString ~= nil
 				then
 					if nReplyHumanCount == nMaxReplyCount
-					then chatString = J.Chat.GetStopReplyString() end
+					then
+						local sStop = J.Chat.GetStopReplyString()
+						if sStop ~= nil then chatString = sStop end
+					end
 
 					bot:ActionImmediate_Chat( chatString, bAllChat )
 
