@@ -70,10 +70,12 @@ if not okBanner then print( '[OHA-LLM] banner failed: ' .. tostring( sBannerErr 
 -- with a no-op; the captured function keeps working after the override.
 local RealPrint = print
 
--- Replies to !llm during hero selection are also drawn on screen: no bot hero
--- exists yet (no chat speaker) and GameRules is not available in the bots VM.
-local sForkChatLine = nil
-local nForkChatUntil = 0
+-- Rolling on-screen log: during hero selection there is no bot unit to speak
+-- chat yet and GameRules is not available in the bots VM, so the overlay is
+-- the only guaranteed visible channel besides the console.
+local tForkLog = {}
+local FORK_LOG_LINES = 3
+local FORK_LOG_TTL = 12
 
 -- Every channel is best-effort: console (RealPrint survives the override),
 -- message feed (GameRules), and team bot chat. Chat is the visible fallback
@@ -82,6 +84,10 @@ local function ForkLog(msg)
 	pcall( RealPrint, msg )
 	pcall( print, msg )
 	pcall( MsgN, msg )
+	pcall( function()
+		table.insert( tForkLog, 1, { msg = tostring( msg ), expires = GameTime() + FORK_LOG_TTL } )
+		while #tForkLog > FORK_LOG_LINES do table.remove( tForkLog ) end
+	end )
 	pcall( function()
 		if GameRules ~= nil and GameRules.SendCustomMessage ~= nil then
 			GameRules:SendCustomMessage( msg, 0, 0 )
@@ -1039,8 +1045,10 @@ function Think()
 		if okS and type( sPick ) == 'string' then
 			pcall( DebugDrawText, 0.70, 0.085, sPick, 0, 255, 170 )
 		end
-		if sForkChatLine ~= nil and GameTime() < nForkChatUntil then
-			pcall( DebugDrawText, 0.70, 0.12, sForkChatLine, 0, 255, 170 )
+		for idx, entry in ipairs( tForkLog ) do
+			if GameTime() < entry.expires then
+				pcall( DebugDrawText, 0.70, 0.12 + ( idx - 1 ) * 0.025, entry.msg, 0, 255, 170 )
+			end
 		end
 	end
 	local okE, tPickEvents = pcall( LLMAdapter.DrainPickEvents )
@@ -1134,8 +1142,6 @@ function SelectHeroChatCallback(PlayerID, ChatText, bTeamOnly)
 		-- only loads at bot spawn, so its chat callback is absent during draft.
 		local sLLMReply = LLM_Commands.HandleChatCommand( text )
 		if sLLMReply ~= nil then
-			sForkChatLine = sLLMReply
-			nForkChatUntil = GameTime() + 10
 			LLMBroadcast( sLLMReply )
 			return
 		end
