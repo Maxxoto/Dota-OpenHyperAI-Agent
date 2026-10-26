@@ -407,6 +407,7 @@ function X.SetTalkMessage()
 			bInstallChatCallbackDone = true
 			--print(botName)
 			InstallChatCallback( function( tChat ) X.SetReplyHumanTime( tChat ) end )
+			bot:ActionImmediate_Chat( '[OHA-LLM] fork active - !llm status ready', false )
 		end
 
 		if sHumanString ~= nil
@@ -519,7 +520,10 @@ function X.SetReplyHumanTime( tChat )
 
 	if string.find(sChatString, "!llm") then
 		local sLLMReply = LLM_Commands.HandleChatCommand( sChatString )
-		if sLLMReply then print( sLLMReply ) end
+		if sLLMReply then
+			print( sLLMReply )
+			bot:ActionImmediate_Chat( sLLMReply, not tChat.team_only )
+		end
 		return
 	end
 

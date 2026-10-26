@@ -41,8 +41,11 @@ local heroUnitNames = require( GetScriptDirectory()..'/FretBots/HeroNames')
 local Customize = require(GetScriptDirectory()..'/FunLib/custom_loader')
 
 -- [OHA-LLM] Fork banner: proves THIS modified script is the one Dota loaded.
--- Prints once per team VM at hero-selection load. Master gate mirrors llm_gateway:
+-- Prints once per team VM at hero-selection load (console, when visible) and
+-- draws on-screen during draft via DebugDrawText (chat/console are unreliable
+-- for the hero-selection scope). Master gate mirrors llm_gateway:
 -- Allow_LLM_Advisor (general.lua) AND Enable (llm.lua) must both be true.
+local sForkBanner
 do
 	local sFlag = tostring( Customize.Allow_LLM_Advisor == true )
 	local sEnable = 'false'
@@ -53,8 +56,10 @@ do
 		sEnable = tostring( tCfg.Enable )
 		sModel = tostring( tCfg.Model )
 	end
-	print( '[OHA-LLM] FORK ACTIVE - modified OHA script running (Allow_LLM_Advisor=' .. sFlag .. ', llm.lua Enable=' .. sEnable .. ', model=' .. sModel .. ')' )
-	if sFlag ~= 'true' or sEnable ~= 'true' then
+	local sGate = (sFlag == 'true' and sEnable == 'true') and 'gate=ON' or 'gate=OFF'
+	sForkBanner = '[OHA-LLM] FORK ACTIVE ' .. sGate .. ' (flag=' .. sFlag .. ' enable=' .. sEnable .. ' model=' .. sModel .. ')'
+	print( sForkBanner )
+	if sGate == 'gate=OFF' then
 		print( '[OHA-LLM] master gate OFF - bots stay 100% default. Fix: game/Customize/general.lua -> Allow_LLM_Advisor=true AND game/Customize/llm.lua -> Enable=true (see bots/Customize/llm.example.lua)' )
 	end
 end
@@ -962,6 +967,7 @@ end
 --==============================================================================
 
 function Think()
+	if sForkBanner then DebugDrawText( 0.70, 0.05, sForkBanner, 0, 255, 170 ) end
 	if GetGameMode() == GAMEMODE_CM or GetGameMode() == GAMEMODE_REVERSE_CM then
 		CaptainMode.CaptainModeLogic(SupportedHeroes);
 		CaptainMode.AddToList();

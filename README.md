@@ -122,11 +122,11 @@ At hero spawn the same directive supplies a skill order (`q`/`w`/`e`/`r`), talen
 
 ### Verifying It Runs
 
--   At hero-selection load the console prints `[OHA-LLM] FORK ACTIVE - modified OHA script running (...)` (once per team VM). **No banner = the lobby is not running this fork** — stale clone or Workshop copy. `git pull`, then start a fresh lobby.
--   If the banner says `master gate OFF`, fix the two flags it names (`game/Customize/general.lua` and `game/Customize/llm.lua`).
+-   During hero selection the fork draws `[OHA-LLM] FORK ACTIVE gate=ON|OFF (...)` as an **on-screen overlay** (top-right) every draft frame, and prints it to console when console prints are visible. **No overlay = the lobby is not running this fork** — stale clone or Workshop copy. `git pull`, then start a fresh lobby.
+-   If the overlay says `gate=OFF`, fix the two flags it names (`game/Customize/general.lua` and `game/Customize/llm.lua`).
 -   With the gate on, watch for `[OHA-LLM]` ask/accept lines during hero selection — the draft asks only run there.
--   `!llm` commands answer in the **console** (not chat) and only **after the horn**: one bot per team installs the chat hook once the game is in progress. Team chat when you have bot teammates; all-chat (`Shift+Enter`) when playing solo against the bots. During the draft, `!llm` silence is normal — `!pick`/`!ban` work there through a different hook.
--   Any `!llm <anything>` input prints at least a usage line — so total silence while `!sp` works means an old copy without the LLM branch.
+-   `!llm` commands answer **in chat** (same channel you typed in; console prints are unreliable in the hero-selection/ability scopes) and only **after the horn**: one bot per team announces `[OHA-LLM] fork active - !llm status ready` in team chat when its chat hook installs, then `!llm status` works. Team chat when you have bot teammates; all-chat (`Shift+Enter`) when playing solo against the bots. During the draft, `!llm` silence is normal — `!pick`/`!ban` work there through a different hook.
+-   Any `!llm <anything>` input gets at least a usage reply in chat — so total silence (no announcement, no reply) while `!sp` works means an old copy without the LLM branch.
 -   Hot reload after a `git pull`: `sv_cheats 1` then `dota_bot_reload_scripts` re-reads the Lua mid-game. Bot purchase/mode state resets, and draft asks don't re-run — use it for quick "is new code alive" checks only.
 
 ### Setup
