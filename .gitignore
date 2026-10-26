@@ -66,3 +66,10 @@ dist
 
 # user's personal customized settings
 game/Customize
+
+# local secrets for out-of-game tooling (live tests, learn scripts)
+.env
+.env.*
+!.env.example
+.omo
+.omc
