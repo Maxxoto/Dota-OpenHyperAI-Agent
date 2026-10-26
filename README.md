@@ -120,11 +120,41 @@ At hero spawn the same directive supplies a skill order (`q`/`w`/`e`/`r`), talen
 
 `!llm on` can't override the master switch in `general.lua`. It only undoes an `!llm off` from the same game.
 
+### Adaptive Strategy
+
+Once the game is running, one bot asks the model for a macro read every 5 minutes: a stance plus push pressure per lane. That stops at 8 asks per game, and the answer never replaces Valve's desire table.
+
+Each returned value is a multiplier clamped to 0..1 and merged into the existing desire under a hard alpha cap. Out-of-range numbers are clamped, unknown keys dropped, so a bad answer can only nudge play.
+
+Every accepted ask prints one line in chat and the message feed:
+
+```
+[OHA-LLM] strategy @12m: push, mid 0.7 (ask 3/8)
+```
+
+Set `Phases.desire = false` to turn it off. With the checkpoint off, bot play stays identical to upstream.
+
+### Natural-Language Control
+
+Talk to a bot like a teammate: `axe go safelane`, `mid come safe`. No `!` prefix, no menu.
+
+The model returns one of two tool calls, `swap_lane` (lane word: safe, mid, off) or `swap_position` (pos 1-5). The router checks each call against the live roster before anything moves. Teammate bots only: a human slot or an enemy hero gets rejected, with an audit line such as `[OHA-LLM] chat tool rejected: hero-not-teammate`.
+
+Swaps are capped at 4 per game with a 30 second cooldown between them. A message only reaches the model when it names a hero and a command word, so ordinary banter costs no calls. The `!pos`, `!3pos`, `!pick` and `!ban` commands still work exactly as before.
+
+### Bot Identity
+
+Every bot gets a seeded persona, built once per game from its hero and the match clock: a handle (`axe_enjoyer`), an archetype (cocky, stoic, chatty), a voice, and catchphrases. That persona speaks the bot's chat replies and its compliance lines, so a suggestion sounds like a player on your team instead of a system message.
+
+Identity is expression only. It changes how a bot talks, never what it picks, builds or where it walks. Turn chat off and the personas go quiet with it, with zero effect on play.
+
 ### Verifying It Runs
 
 -   During hero selection the fork draws `[OHA-LLM] FORK ACTIVE gate=ON|OFF (...)` as an **on-screen overlay** (top-right) every draft frame, and prints it to console when console prints are visible. **No overlay = the lobby is not running this fork** — stale clone or Workshop copy. `git pull`, then start a fresh lobby.
 -   If the overlay says `gate=OFF`, fix the two flags it names (`game/Customize/general.lua` and `game/Customize/llm.lua`).
 -   With the gate on, watch for `[OHA-LLM]` ask/accept lines during hero selection — the draft asks only run there. When each hero with an LLM build spawns, its skill order and opening items are announced in chat and the message feed (e.g. `[OHA-LLM] build axe (pos 3): q-w-e-r | blink, bkb, heart +2`).
+-   The same spawn announces the bot's persona: `[OHA-LLM] identity axe_enjoyer: cocky (chattiness 0.7)`. One handle per bot per game, and a fresh match seeds new ones.
+-   After the horn, a strategy checkpoint lands roughly every 5 minutes (8 per game at most): `[OHA-LLM] strategy @6m: push, mid 0.7 (ask 1/8)` in chat and the feed. Silence here means the phase is off or the match hasn't started. Type `axe go safelane` in chat to exercise a lane swap, then watch for the tool line or the rejection reason.
 -   `!llm` commands answer **in chat** (same channel you typed in; console prints are unreliable in the hero-selection/ability scopes) and only **after the horn**: one bot per team announces `[OHA-LLM] fork active - !llm status ready` in team chat when its chat hook installs, then `!llm status` works. Team chat when you have bot teammates; all-chat (`Shift+Enter`) when playing solo against the bots. During the draft, `!llm` silence is normal — `!pick`/`!ban` work there through a different hook.
 -   Any `!llm <anything>` input gets at least a usage reply in chat — so total silence (no announcement, no reply) while `!sp` works means an old copy without the LLM branch.
 -   Hot reload after a `git pull`: `sv_cheats 1` then `dota_bot_reload_scripts` re-reads the Lua mid-game. Bot purchase/mode state resets, and draft asks don't re-run — use it for quick "is new code alive" checks only.
