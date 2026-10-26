@@ -23,6 +23,7 @@
         "neutrals": "npm run build:node && node ./dist/post-process/neutrals.js",
         "matchups": "npm run build:node && node ./dist/post-process/matchups.js",
         "release": "node ./typescript/post-process/update-version.js && npm run build && npm run prettier",
+        "learn": "node scripts/learn.mjs",
         "test": "tsc -p tsconfig-test.json && node --test dist-test/test/*.test.js"
     },
     "dependencies": {
