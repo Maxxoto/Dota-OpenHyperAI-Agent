@@ -23,6 +23,9 @@ export interface ChatEnvelope {
 	tool_calls?: EnvelopeToolCall[];
 }
 
+export const ENVELOPE_MAX_TOOL_CALLS = 8;
+export const ENVELOPE_MAX_REPLY = 400;
+
 export const TOOLS = ["swap_lane", "swap_position"] as const;
 
 const COMMAND_WORDS: string[] = [
@@ -94,6 +97,9 @@ export function EnvelopeParse(raw: any): ChatEnvelope | undefined {
 		// Typed local: tstl only emits __TS__StringSplit for a `string` receiver.
 		const replyText: string = raw.reply;
 		reply = replyText.split("\n")[0] ?? "";
+		if (reply.length > ENVELOPE_MAX_REPLY) {
+			return undefined;
+		}
 	}
 	const calls: EnvelopeToolCall[] = [];
 	if (raw.tool_calls !== undefined) {
@@ -103,6 +109,9 @@ export function EnvelopeParse(raw: any): ChatEnvelope | undefined {
 		// any[]-typed binding so tstl compiles .length to '#' (dkjson-decoded
 		// arrays carry no .length field; raw .length on `any` reads nil).
 		const rawCalls: any[] = raw.tool_calls;
+		if (rawCalls.length > ENVELOPE_MAX_TOOL_CALLS) {
+			return undefined;
+		}
 		for (let i = 0; i < rawCalls.length; i += 1) {
 			const rawCall: any = rawCalls[i];
 			if (!IsTable(rawCall) || typeof rawCall.tool !== "string" || rawCall.tool === "") {

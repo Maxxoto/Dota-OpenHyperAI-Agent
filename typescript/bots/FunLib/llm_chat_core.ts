@@ -187,6 +187,9 @@ export function SanitizeChatReply(raw: string | undefined): string | undefined {
 	if (
 		Contains(lower, "as an ai") || Contains(lower, "language model")
 		|| Contains(lower, "i am a bot") || Contains(lower, "i'm a bot")
+		|| Contains(lower, "i am an ai") || Contains(lower, "i'm an ai")
+		|| Contains(lower, "im an ai") || Contains(lower, "an ai bot")
+		|| Contains(lower, "i am artificial") || Contains(lower, "this ai")
 	) {
 		return undefined;
 	}

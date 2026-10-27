@@ -72,6 +72,8 @@ local function __TS__StringIncludes(self, searchString, position)
 end
 -- End of Lua Library inline imports
 local ____exports = {}
+____exports.ENVELOPE_MAX_TOOL_CALLS = 8
+____exports.ENVELOPE_MAX_REPLY = 400
 ____exports.TOOLS = {"swap_lane", "swap_position"}
 local COMMAND_WORDS = {
     "go",
@@ -135,6 +137,9 @@ function ____exports.EnvelopeParse(raw)
         end
         local replyText = raw.reply
         reply = __TS__StringSplit(replyText, "\n")[1] or ""
+        if #reply > ____exports.ENVELOPE_MAX_REPLY then
+            return nil
+        end
     end
     local calls = {}
     if raw.tool_calls ~= nil then
@@ -142,6 +147,9 @@ function ____exports.EnvelopeParse(raw)
             return nil
         end
         local rawCalls = raw.tool_calls
+        if #rawCalls > ____exports.ENVELOPE_MAX_TOOL_CALLS then
+            return nil
+        end
         do
             local i = 0
             while i < #rawCalls do
@@ -251,11 +259,11 @@ function ____exports.Prefilter(text, heroHints)
         local i = 0
         while i < #heroHints do
             do
-                local __continue46
+                local __continue48
                 repeat
                     local hint = heroHints[i + 1]
                     if type(hint) ~= "string" or hint == "" then
-                        __continue46 = true
+                        __continue48 = true
                         break
                     end
                     if __TS__StringIncludes(
@@ -265,9 +273,9 @@ function ____exports.Prefilter(text, heroHints)
                         hasHero = true
                         break
                     end
-                    __continue46 = true
+                    __continue48 = true
                 until true
-                if not __continue46 then
+                if not __continue48 then
                     break
                 end
             end

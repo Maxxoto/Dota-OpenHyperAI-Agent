@@ -212,7 +212,7 @@ function ____exports.SanitizeChatReply(raw)
     if Contains(lower, "http") or Contains(lower, "www.") then
         return nil
     end
-    if Contains(lower, "as an ai") or Contains(lower, "language model") or Contains(lower, "i am a bot") or Contains(lower, "i'm a bot") then
+    if Contains(lower, "as an ai") or Contains(lower, "language model") or Contains(lower, "i am a bot") or Contains(lower, "i'm a bot") or Contains(lower, "i am an ai") or Contains(lower, "i'm an ai") or Contains(lower, "im an ai") or Contains(lower, "an ai bot") or Contains(lower, "i am artificial") or Contains(lower, "this ai") then
         return nil
     end
     if #line > ____exports.CHAT_MAX_LEN then
