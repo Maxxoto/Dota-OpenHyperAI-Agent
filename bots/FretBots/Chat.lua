@@ -32,7 +32,7 @@ function Chat:SendHttpRequest(api, inputData, callback)
     -- into ability_item_usage_generic's reply hook. 'start'/'end' telemetry
     -- pings are intentionally dropped: nothing leaves the machine except
     -- Groq calls the user configured.
-    if callback then callback(nil) end
+    if callback then callback({}) end
 end
 
 function Chat.StartCallback(resJsonObj)

@@ -36,6 +36,7 @@ local ValidateToolCall = ____llm_tools_core.ValidateToolCall
 local jsonlib = require(GetScriptDirectory().."/ts_libs/utils/json")
 local limiter = {replies = 0, lastReplyAt = -999}
 local inFlight = false
+local inflightAt = 0
 function ____exports.ChatEnabled()
     return Gateway.Enabled("chat")
 end
@@ -100,6 +101,9 @@ end
 -- "skipped" means the layer is off, a call is already in flight, or the dice
 -- and cooldown said no - the caller keeps its local fallback.
 function ____exports.MaybeReplyEnvelope(ctx, now, onResult)
+    if inFlight and now - inflightAt > 15 then
+        inFlight = false
+    end
     if not ____exports.ChatEnabled() or inFlight then
         return "skipped"
     end
@@ -113,6 +117,7 @@ function ____exports.MaybeReplyEnvelope(ctx, now, onResult)
         return "skipped"
     end
     inFlight = true
+    inflightAt = now
     local delivered = false
     local function deliver(result)
         if delivered then

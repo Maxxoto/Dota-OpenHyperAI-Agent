@@ -48,6 +48,7 @@ export type ChatEnvelopeContext = ChatContext & ChatRoster;
 
 const limiter: ChatLimiterState = { replies: 0, lastReplyAt: -999 };
 let inFlight = false;
+let inflightAt = 0;
 
 export function ChatEnabled(): boolean {
 	return Gateway.Enabled("chat");
@@ -120,6 +121,11 @@ export function MaybeReplyEnvelope(
 	now: number,
 	onResult: (r: EnvelopeReply) => void
 ): ChatAttempt {
+	if (inFlight && now - inflightAt > 15) {
+		// Engine callback never fired (dropped request): recover instead of
+		// silencing chat for the rest of the game.
+		inFlight = false;
+	}
 	if (!ChatEnabled() || inFlight) {
 		return "skipped";
 	}
@@ -128,6 +134,7 @@ export function MaybeReplyEnvelope(
 		return "skipped";
 	}
 	inFlight = true;
+	inflightAt = now;
 	let delivered = false;
 	const deliver = (result: EnvelopeReply) => {
 		if (delivered) {
