@@ -109,36 +109,44 @@ function AskOnce(sig, candidates, bans, now, scheduleInitialized, s)
     local trimmed = #candidates > MAX_CANDIDATES and __TS__ArraySlice(candidates, 0, MAX_CANDIDATES) or candidates
     ForkLog(((("[OHA-LLM] draft ask #" .. tostring(s.askedCount)) .. " (") .. tostring(#trimmed)) .. " candidates)")
     pickEvents[#pickEvents + 1] = ((((("[OHA-LLM] draft ask #" .. tostring(s.askedCount)) .. "/") .. tostring(MAX_DRAFT_ASKS)) .. " sent (") .. tostring(#trimmed)) .. " candidates)"
-    AskDraftDirective(
-        {candidates = trimmed, bans = bans},
-        MemoryNotes(),
-        function(directive)
-            s.inFlight = false
-            if directive ~= nil then
-                local pickNames = table.concat(
-                    __TS__ArrayMap(
-                        directive.picks,
-                        function(____, p) return ShortHero(p.hero) end
-                    ),
-                    ","
-                )
-                local ev = "[OHA-LLM] draft reply OK: picks " .. pickNames
-                if #directive.bans > 0 then
-                    ev = ev .. " | bans " .. table.concat(
+    local okAsk = {pcall(function()
+        AskDraftDirective(
+            {candidates = trimmed, bans = bans},
+            MemoryNotes(),
+            function(directive)
+                s.inFlight = false
+                if directive ~= nil then
+                    local pickNames = table.concat(
                         __TS__ArrayMap(
-                            directive.bans,
-                            function(____, b) return ShortHero(b.hero) end
+                            directive.picks,
+                            function(____, p) return ShortHero(p.hero) end
                         ),
                         ","
                     )
+                    local ev = "[OHA-LLM] draft reply OK: picks " .. pickNames
+                    if #directive.bans > 0 then
+                        ev = ev .. " | bans " .. table.concat(
+                            __TS__ArrayMap(
+                                directive.bans,
+                                function(____, b) return ShortHero(b.hero) end
+                            ),
+                            ","
+                        )
+                    end
+                    pickEvents[#pickEvents + 1] = ev
+                    ForkLog(((("[OHA-LLM] draft directive active: " .. tostring(#directive.picks)) .. " picks, ") .. tostring(#directive.bans)) .. " bans")
+                else
+                    pickEvents[#pickEvents + 1] = "[OHA-LLM] draft reply rejected/empty - default picks"
                 end
-                pickEvents[#pickEvents + 1] = ev
-                ForkLog(((("[OHA-LLM] draft directive active: " .. tostring(#directive.picks)) .. " picks, ") .. tostring(#directive.bans)) .. " bans")
-            else
-                pickEvents[#pickEvents + 1] = "[OHA-LLM] draft reply rejected/empty - default picks"
             end
-        end
-    )
+        )
+    end)}
+    if not okAsk then
+        s.inFlight = false
+        s.askedSig = nil
+        s.askedCount = s.askedCount - 1
+        pickEvents[#pickEvents + 1] = "[OHA-LLM] draft ask failed - will retry next tick"
+    end
 end
 MAX_DRAFT_ASKS = 2
 FIRST_PICK_WAIT_SEC = 6
@@ -204,24 +212,27 @@ function ____exports.AdjustScore(hero, base)
     end
     return base
 end
+--- Cheap probe for the Lua think loop: skip the candidate gather entirely
+-- when no ask can ever consume it (layer off or budget spent).
+function ____exports.DraftActive()
+    return DraftAskEnabled() and State().askedCount < MAX_DRAFT_ASKS
+end
 --- Per-tick draft driver: fire-and-observe, never blocks. May start one async
 -- LLM ask (see policy above). Returns "wait" only inside the bounded
 -- first-pick grace window with no directive cached yet; "go" otherwise.
 function ____exports.DraftStep(enemyNames, candidates, bans, now, scheduleInitialized)
     local s = State()
     if DraftAskEnabled() and not s.inFlight and s.askedCount < MAX_DRAFT_ASKS then
-        if CachedDraftDirective() == nil then
-            local sig = SignatureOf(enemyNames)
-            if sig ~= s.askedSig and #candidates > 0 then
-                AskOnce(
-                    sig,
-                    candidates,
-                    bans,
-                    now,
-                    scheduleInitialized,
-                    s
-                )
-            end
+        local sig = SignatureOf(enemyNames)
+        if sig ~= s.askedSig and #candidates > 0 then
+            AskOnce(
+                sig,
+                candidates,
+                bans,
+                now,
+                scheduleInitialized,
+                s
+            )
         end
     end
     if now < s.waitUntil and CachedDraftDirective() == nil then

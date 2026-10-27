@@ -92,6 +92,12 @@ export function AdjustScore(hero: string, base: number): number {
 
 export type DraftStepResult = "wait" | "go";
 
+/** Cheap probe for the Lua think loop: skip the candidate gather entirely
+ *  when no ask can ever consume it (layer off or budget spent). */
+export function DraftActive(): boolean {
+	return DraftAskEnabled() && State().askedCount < MAX_DRAFT_ASKS;
+}
+
 /**
  * Per-tick draft driver: fire-and-observe, never blocks. May start one async
  * LLM ask (see policy above). Returns "wait" only inside the bounded
@@ -106,11 +112,9 @@ export function DraftStep(
 ): DraftStepResult {
 	const s = State();
 	if (DraftAskEnabled() && !s.inFlight && s.askedCount < MAX_DRAFT_ASKS) {
-		if (CachedDraftDirective() === undefined) {
-			const sig = SignatureOf(enemyNames);
-			if (sig !== s.askedSig && candidates.length > 0) {
-				AskOnce(sig, candidates, bans, now, scheduleInitialized, s);
-			}
+		const sig = SignatureOf(enemyNames);
+		if (sig !== s.askedSig && candidates.length > 0) {
+			AskOnce(sig, candidates, bans, now, scheduleInitialized, s);
 		}
 	}
 	if (now < s.waitUntil && CachedDraftDirective() === undefined) {
@@ -166,7 +170,10 @@ function AskOnce(
 		"[OHA-LLM] draft ask #" + s.askedCount + "/" + MAX_DRAFT_ASKS
 		+ " sent (" + trimmed.length + " candidates)"
 	);
-	AskDraftDirective({ candidates: trimmed, bans }, MemoryNotes(), (directive) => {
+	// A synchronous throw (transport/config error) must refund the ask so the
+	// next tick can retry; a stranded inFlight would end draft asks for the game.
+	const okAsk = pcall(() => {
+		AskDraftDirective({ candidates: trimmed, bans }, MemoryNotes(), (directive) => {
 		s.inFlight = false;
 		if (directive !== undefined) {
 			const pickNames = directive.picks.map((p) => ShortHero(p.hero)).join(",");
@@ -181,7 +188,14 @@ function AskOnce(
 				+ directive.bans.length + " bans"
 			);
 		} else {
-			pickEvents.push("[OHA-LLM] draft reply rejected/empty - default picks");
-		}
+				pickEvents.push("[OHA-LLM] draft reply rejected/empty - default picks");
+			}
+		});
 	});
+	if (!okAsk) {
+		s.inFlight = false;
+		s.askedSig = undefined;
+		s.askedCount -= 1;
+		pickEvents.push("[OHA-LLM] draft ask failed - will retry next tick");
+	}
 }

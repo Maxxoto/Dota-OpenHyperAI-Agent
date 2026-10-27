@@ -1093,6 +1093,8 @@ function Think()
 		-- window. No-op when the layer is off (G5). Isolated so one bad engine
 		-- call reports itself instead of surfacing as an opaque VScript error.
 		local okDraft, waitOrErr = pcall( function()
+			local okActive, bActive = pcall( LLMAdapter.DraftActive )
+			if okActive and bActive == false then return false end
 			local llmEnemies = GetEnemyHeroNames()
 			local llmCandidates, llmSeen = {}, {}
 			for pos = 1, 5 do
