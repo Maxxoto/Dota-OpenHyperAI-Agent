@@ -126,7 +126,7 @@ exit /b 0
 :failed
 echo ============
 echo "1. Make sure this script sits in a folder that contains the bot scripts (hero_selection.lua one level up)."
-echo "2. If you don't know where the Steam folder is, right click Dota2 in Steam Library, select Properties > Installed Files > Browse." It will open the folder: "Steam\steamapps\common\dota 2 beta", now replace the path text "common\dota 2 beta" in the address to be "workshop\content\570\3246316298\Install-to-vscript", hit Enter to open the correct folder.
+echo "2. If you don't know where the Steam folder is, right click Dota2 in Steam Library, select Properties ^> Installed Files ^> Browse." It will open the folder: "Steam\steamapps\common\dota 2 beta", now replace the path text "common\dota 2 beta" in the address to be "workshop\content\570\3246316298\Install-to-vscript", hit Enter to open the correct folder.
 echo "3. Run this file as Administrator"
 echo ============
 echo 安装失败!!!

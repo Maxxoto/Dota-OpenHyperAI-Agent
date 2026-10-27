@@ -80,7 +80,7 @@ One caveat before you link: `vscripts/game` is a stock Valve folder and this for
 
 **3. Turn on the LLM advisor** with the [setup steps below](#setup).
 
-**Quick way (Windows):** run `bots\Install-to-vscript\quick-install-oha.bat` from your clone, as Administrator. It auto-detects your Steam install (registry), links `bots/` (junction fallback if symlinks are blocked), copies `Customize` to the permanent game tier, and can enable the LLM advisor for you: it asks for your Groq key and writes it into `<vscripts>/game/Customize/llm.lua` plus flips `Allow_LLM_Advisor = true` in the game-tier copy — the key never lands in the repo. The Linux/macOS scripts in that folder still target the Workshop copy; use the manual links below there.
+**Quick way:** run `bots\Install-to-vscript\quick-install-fork.ps1` (Windows) or `quick-install-fork.sh` (macOS/Linux) from your clone. Both link `bots/` **and** `game/` (the fork needs both), create the permanent config tier, and offer to paste your Groq key into `<vscripts>/game/Customize/llm.lua` — the key never lands in the repo. The older `quick-install-oha*` scripts link the Workshop copy (bots only) — do not use them for a fork install.
 
 ---
 
@@ -175,11 +175,11 @@ Identity is expression only. It changes how a bot talks, never what it picks, bu
 
 To disable the layer on any machine, set `Customize.Allow_LLM_Advisor = false` in `<vscripts>/game/Customize/general.lua` (full copy of `bots/Customize/general.lua`, see the note above about the table being replaced, not merged) - or set `Enable = false` in `llm.lua`.
 
-Other knobs in `llm.lua`: `Endpoint`, `Model`, `TimeoutMs` (8000), `MaxCalls` (12 policy / 30 chat), and `Phases` (draft, builds, and chat on; desire reserved for later work).
+Other knobs in `llm.lua`: `Endpoint`, `Model`, `TimeoutMs` (8000), and `Phases` (draft, builds, chat, and desire on; each can be disabled).
 
 ### Human-Like Bot Chat (Trash Talk)
 
-With `Phases.chat = true`, bots reply to your chat through Groq with a human-player persona: cocky, playful BM, Dota slang, same language you typed in, and never an admission of being an AI (rule-breaking replies are rejected by a sanitizer - one line, no links, 140-char cap). Replies are rate-limited (25s cooldown, ~60% chance, 12 per game on top of the 30-call chat budget) and fall back to the original local-table replies when the layer is off, slow, or malformed (G5).
+With `Phases.chat = true`, bots reply to your chat through Groq with a human-player persona: cocky, playful BM, Dota slang, same language you typed in, and never an admission of being an AI (rule-breaking replies are rejected by a sanitizer - one line, no links, 140-char cap). Replies are rate-limited (10s cooldown between replies) and fall back to the original local-table replies when the layer is off, slow, or malformed (G5).
 
 This **replaces** upstream's third-party ChatGPT backend (`chatgpt-with-dota2bot.onrender.com`): that service is removed from this fork - no game data leaves your machine except the Groq calls you configured.
 
